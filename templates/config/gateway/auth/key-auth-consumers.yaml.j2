@@ -1,0 +1,50 @@
+{#
+  Key-Based Authentication Consumers
+  
+  Defines authenticated consumers (clients) that can access the gateway
+  using API key authentication via the azure-openai-auth plugin.
+  
+  Environment Variables (Indexed):
+    - GATEWAY_CLIENT_NAME_N: Client identifier/username (e.g., "webapp", "mobile-app")
+    - GATEWAY_CLIENT_KEY_N: API key for this client (e.g., "secret-key-abc123")
+  
+  Multiple Clients Example:
+    GATEWAY_CLIENT_NAME_0="webapp"
+    GATEWAY_CLIENT_KEY_0="webapp-key-123"
+    GATEWAY_CLIENT_NAME_1="mobile-app"
+    GATEWAY_CLIENT_KEY_1="mobile-key-456"
+    GATEWAY_CLIENT_NAME_2="analytics"
+    GATEWAY_CLIENT_KEY_2="analytics-key-789"
+  
+  Single Client (Legacy):
+    If no indexed clients are defined, a default "gateway-client" is created
+    using GATEWAY_CLIENT_KEY environment variable.
+  
+  Usage:
+    Clients authenticate by providing their key in either:
+    - api-key: <key> header (Azure OpenAI native)
+    - Authorization: Bearer <key> header (OpenAI-compatible)
+  
+  Loaded via: gateway/core/loader.py :: load_gateway_clients()
+  
+  See: templates/auth/azure-openai-auth.yaml.j2
+#}
+{% if (gateway_require_auth | default(false)) and not gateway_client_groups %}
+{# Legacy single-client mode #}
+consumers:
+  - username: gateway-client
+    plugins:
+      azure-openai-auth:
+        key: {{ env.get("GATEWAY_CLIENT_KEY", "") | tojson }}
+{% endif %}
+
+{% if gateway_client_groups %}
+{# Multi-client mode with indexed env vars #}
+consumers:
+{% for client in gateway_client_groups %}
+  - username: {{ client.NAME | tojson }}
+    plugins:
+      azure-openai-auth:
+        key: {{ client.KEY | tojson }}
+{% endfor %}
+{% endif %}

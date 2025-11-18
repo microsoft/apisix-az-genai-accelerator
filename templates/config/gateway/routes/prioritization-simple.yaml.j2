@@ -1,0 +1,125 @@
+{#
+  Prioritization scenario (APIM parity)
+
+  Two routes under /prioritization-simple that share the same ai-proxy-multi
+  backend list but apply different limit-req settings. Included only when
+  `gateway_e2e_test_mode` is true.
+#}
+
+- name: prio-low
+  uris:
+    - /prioritization-simple/openai/deployments/*/completions
+    - /prioritization-simple/openai/deployments/*/chat/completions
+    - /prioritization-simple/openai/deployments/*/embeddings
+  methods: [POST]
+  priority: 100
+  vars:
+    - [ "http_x_priority", "==", "low" ]
+  plugins:
+    request-id:
+      algorithm: uuid
+      header_name: X-Request-ID
+      include_in_response: true
+    {# APIM gateway logging metadata #}
+    {% set apim_gateway_operation_name = "prioritization-low" %}
+    {% set apim_gateway_api_id = "prioritization-simple" %}
+    {% set apim_gateway_product_id = gateway_product_id | default('') %}
+
+{% filter indent(width=4, first=True, blank=True) %}
+{% include "plugins/apim-gateway-logger.yaml.j2" %}
+{% include "auth/azure-openai-auth.yaml.j2" %}
+{% include "auth/oidc-auth.yaml.j2" %}
+{% include "plugins/cors.yaml.j2" %}
+{% include "plugins/rate-limit.yaml.j2" %}
+{% include "plugins/quota-limit.yaml.j2" %}
+{% set ai_rate_limit_limit = ai_rate_limit_low_limit | default(20) %}
+{% include "plugins/ai-rate-limit.yaml.j2" %}
+{% include "plugins/apim-priority-headers.yaml.j2" %}
+{% include "plugins/ip-restriction.yaml.j2" %}
+{% include "plugins/response-rewrite.yaml.j2" %}
+{% include "plugins/cache.yaml.j2" %}
+{% include "plugins/proxy-buffering.yaml.j2" %}
+{% include "plugins/proxy-control.yaml.j2" %}
+{% include "plugins/opentelemetry.yaml.j2" %}
+proxy-rewrite:
+  regex_uri:
+    - "^/prioritization-simple(/openai/.*)$"
+    - "$1"
+{% include "plugins/ai-proxy.yaml.j2" %}
+{% endfilter %}
+
+    limit-req:
+      rate: 1000        # effectively disable gateway-side throttling for low priority (APIM relies on backend headers)
+      burst: 500
+      key_type: var
+      key: http_api_key
+
+    prometheus:
+      prefer_name: true
+
+    file-logger:
+      path: "/usr/local/apisix/logs/genai_access.json"
+      include_req_body: false
+      include_resp_body: false
+
+  upstream:
+    nodes: { "127.0.0.1:1": 1 }
+    type: roundrobin
+
+- name: prio-default
+  uris:
+    - /prioritization-simple/openai/deployments/*/completions
+    - /prioritization-simple/openai/deployments/*/chat/completions
+    - /prioritization-simple/openai/deployments/*/embeddings
+  methods: [POST]
+  priority: 10
+  plugins:
+    request-id:
+      algorithm: uuid
+      header_name: X-Request-ID
+      include_in_response: true
+    {# APIM gateway logging metadata #}
+    {% set apim_gateway_operation_name = "prioritization-default" %}
+    {% set apim_gateway_api_id = "prioritization-simple" %}
+    {% set apim_gateway_product_id = gateway_product_id | default('') %}
+
+{% filter indent(width=4, first=True, blank=True) %}
+{% include "plugins/apim-gateway-logger.yaml.j2" %}
+{% include "auth/azure-openai-auth.yaml.j2" %}
+{% include "auth/oidc-auth.yaml.j2" %}
+{% include "plugins/cors.yaml.j2" %}
+{% include "plugins/rate-limit.yaml.j2" %}
+{% include "plugins/quota-limit.yaml.j2" %}
+{% set ai_rate_limit_limit = ai_rate_limit_high_limit | default(200) %}
+{% include "plugins/ai-rate-limit.yaml.j2" %}
+{% include "plugins/apim-priority-headers.yaml.j2" %}
+{% include "plugins/ip-restriction.yaml.j2" %}
+{% include "plugins/response-rewrite.yaml.j2" %}
+{% include "plugins/cache.yaml.j2" %}
+{% include "plugins/proxy-buffering.yaml.j2" %}
+{% include "plugins/proxy-control.yaml.j2" %}
+{% include "plugins/opentelemetry.yaml.j2" %}
+proxy-rewrite:
+  regex_uri:
+    - "^/prioritization-simple(/openai/.*)$"
+    - "$1"
+{% include "plugins/ai-proxy.yaml.j2" %}
+{% endfilter %}
+
+    limit-req:
+      rate: 2000        # effectively no throttling for high priority
+      burst: 1000
+      key_type: var
+      key: http_api_key
+
+    prometheus:
+      prefer_name: true
+
+    file-logger:
+      path: "/usr/local/apisix/logs/genai_access.json"
+      include_req_body: false
+      include_resp_body: false
+
+  upstream:
+    nodes: { "127.0.0.1:1": 1 }
+    type: roundrobin

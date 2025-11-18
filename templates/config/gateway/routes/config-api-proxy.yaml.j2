@@ -1,0 +1,22 @@
+{#
+  Internal proxy to the local gateway config API sidecar that rewrites
+  ai-proxy-multi weights for the latency-routing scenario. Included only when
+  `gateway_e2e_test_mode` is true.
+#}
+
+- name: config-api-preferred-backends
+  uris:
+    - /config/set-preferred-backends
+    - /helpers/set-preferred-backends
+  methods: [POST]
+  plugins:
+    request-id:
+      algorithm: uuid
+      header_name: X-Request-ID
+      include_in_response: true
+    prometheus:
+      prefer_name: true
+  upstream:
+    nodes:
+      "127.0.0.1:9000": 1
+    type: roundrobin

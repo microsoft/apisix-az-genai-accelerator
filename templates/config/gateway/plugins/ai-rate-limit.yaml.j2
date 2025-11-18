@@ -1,0 +1,35 @@
+{#
+  AI token-aware rate limiting (APISIX ai-rate-limiting)
+
+  Environment Variables:
+    - ENABLE_AI_RATE_LIMIT: Enable the plugin (default: false)
+    - AI_RATE_LIMIT_STRATEGY: total_tokens | req (default: total_tokens)
+    - AI_RATE_LIMIT_WINDOW_SECONDS: Window length in seconds (default: 60)
+    - AI_RATE_LIMIT_HIGH_LIMIT: Default tokens/requests per window (default: 200)
+    - AI_RATE_LIMIT_LOW_LIMIT: Low-priority tokens/requests per window (default: 20)
+    - AI_RATE_LIMIT_REJECT_CODE: HTTP status when exceeded (default: 503)
+    - AI_RATE_LIMIT_REJECT_MESSAGE: Message when exceeded (default: "rate limited")
+
+  Usage:
+    - Include without overrides for the default/high bucket.
+    - Include with `ai_rate_limit_limit=ai_rate_limit_low_limit` for low-priority routes.
+  See: https://apisix.apache.org/docs/apisix/plugins/ai-rate-limiting/
+#}
+{% set _limit_candidate = ai_rate_limit_limit if ai_rate_limit_limit is defined else ai_rate_limit_high_limit %}
+{% set _limit = (_limit_candidate | default(200)) | int %}
+{% set _window = ai_rate_limit_window_seconds | default(60) | int %}
+{% set _strategy_raw = ai_rate_limit_strategy | default('total_tokens') %}
+{% if _strategy_raw in ['total_tokens', 'req'] %}
+  {% set _strategy = _strategy_raw %}
+{% else %}
+  {% set _strategy = 'total_tokens' %}
+{% endif %}
+{% if enable_ai_rate_limit | default(false) and _limit > 0 and _window > 0 %}
+ai-rate-limiting:
+  limit: {{ _limit }}
+  time_window: {{ _window }}
+  limit_strategy: {{ _strategy | tojson }}
+  show_limit_quota_header: true
+  rejected_code: {{ ai_rate_limit_reject_code | default(503) | int }}
+  rejected_msg: {{ ai_rate_limit_reject_message | default('rate limited') | tojson }}
+{% endif %}

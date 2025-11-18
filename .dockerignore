@@ -1,0 +1,48 @@
+# Version control metadata
+.git
+.git/*
+
+# Top-level tooling (not needed in runtime image)
+infra/
+tests/
+mock/
+env/
+docs/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+test-results/
+
+# Builds & virtualenvs
+dist/
+build/
+*.egg-info/
+.venv/
+venv/
+ENV/
+env/
+.uv/
+
+# Editors & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Misc project files not needed in runtime
+*.md
+*.code-workspace
+.luarc.json
+.dockerignore
+Dockerfile
+compose*.yml
+compose*.yaml

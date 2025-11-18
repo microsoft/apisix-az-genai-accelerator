@@ -1,0 +1,13 @@
+[project]
+name = "gateway-ops"
+version = "0.1.0"
+description = "Python CLI helpers for APISIX Azure GenAI Accelerator"
+requires-python = ">=3.13"
+dependencies = [
+    "pytfvars>=1.0.3",
+    "python-hcl2>=7.3.1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

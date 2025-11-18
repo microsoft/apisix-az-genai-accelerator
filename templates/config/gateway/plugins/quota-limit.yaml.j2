@@ -1,0 +1,42 @@
+{#
+  Quota Limiting Plugin (Sliding Window Algorithm)
+  
+  Limits total requests per time window per client using a sliding window algorithm.
+  Useful for enforcing usage quotas (e.g., 1000 requests per hour).
+  
+  Environment Variables:
+    - ENABLE_QUOTA: Set to "true" to enable quota limiting (default: false)
+    - QUOTA_COUNT: Maximum requests allowed in time window (e.g., 1000)
+                   Default: 0 (disabled)
+    - QUOTA_TIME_WINDOW: Time window in seconds (e.g., 3600 = 1 hour)
+                         Default: 0
+  
+  Key Strategy:
+    - Uses remote_addr (client IP) as the key
+    - Each IP gets its own quota counter
+  
+  Response on Quota Exceeded:
+    - HTTP 429 (Too Many Requests)
+    - Error message: "Quota exceeded. Please retry after N seconds."
+  
+  Example:
+    ENABLE_QUOTA=true
+    QUOTA_COUNT=1000        # 1000 requests
+    QUOTA_TIME_WINDOW=3600  # per hour (3600 seconds)
+  
+  Customization:
+    - To limit by user/token, change key_type to "var" and key to a different variable
+    - To limit by header, change key to "http_X_Api_Key" or similar
+    - For stricter quotas, reduce QUOTA_COUNT or increase QUOTA_TIME_WINDOW
+  
+  See: https://apisix.apache.org/docs/apisix/plugins/limit-count/
+#}
+{% if enable_quota | default(false) and quota_count | default(0) | int > 0 and quota_time_window | default(0) | int > 0 %}
+limit-count:
+  count: {{ quota_count | int }}
+  time_window: {{ quota_time_window | int }}
+  key_type: var
+  key: remote_addr
+  rejected_code: 429
+  rejected_msg: "Quota exceeded. Please retry after {{ quota_time_window }} seconds."
+{% endif %}

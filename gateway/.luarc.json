@@ -1,0 +1,21 @@
+{
+  "runtime.version": "LuaJIT",
+  "diagnostics.globals": [
+    "ngx",
+    "describe",
+    "context",
+    "it",
+    "specify",
+    "before_each",
+    "after_each",
+    "before",
+    "after",
+    "setup",
+    "teardown",
+    "pending",
+    "insulate",
+    "randomize",
+    "file",
+    "assert"
+  ]
+}

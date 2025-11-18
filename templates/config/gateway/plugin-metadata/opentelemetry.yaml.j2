@@ -1,0 +1,70 @@
+{#
+  OpenTelemetry Distributed Tracing
+  
+  Configures OpenTelemetry plugin for distributed tracing of requests through
+  the gateway and to backend services.
+  
+  Environment Variables:
+    - OTEL_COLLECTOR_ENDPOINT: OpenTelemetry collector endpoint URL
+                               Format: "host:port" (e.g., "otel-collector:4318")
+                               Note: APISIX only supports OTLP/HTTP, use port 4318
+    - OTEL_SERVICE_NAME: Service name for traces (default: "apisix-gateway")
+    - OTEL_SAMPLE_RATE: Trace sampling rate between 0.0 and 1.0
+                        - 1.0 = Sample all requests (dev/testing)
+                        - 0.1 = Sample 10% of requests (production)
+                        Default: 1.0
+  
+  Collector Setup:
+    Requires an OpenTelemetry collector sidecar or external service.
+    The collector receives traces and forwards to backend (Jaeger, Zipkin, etc.).
+  
+  Trace Sampling:
+    - "always_on": Sample all requests (use with OTEL_SAMPLE_RATE < 1.0 for production)
+    - "parent_based": Respect parent span sampling decision (for distributed tracing)
+  
+  Batch Processing:
+    - Traces are batched before sending to reduce overhead
+    - Max queue: 2048 spans
+    - Batch timeout: 5 seconds
+    - Max batch size: 16 spans
+  
+  Example (Development):
+    OTEL_COLLECTOR_ENDPOINT="localhost:4318"
+    OTEL_SERVICE_NAME="apisix-gateway-dev"
+    OTEL_SAMPLE_RATE=1.0
+  
+  Example (Production):
+    OTEL_COLLECTOR_ENDPOINT="otel-collector.monitoring.svc:4318"
+    OTEL_SERVICE_NAME="apisix-gateway-prod"
+    OTEL_SAMPLE_RATE=0.1  # Sample 10% to reduce overhead
+  
+  See: https://apisix.apache.org/docs/apisix/plugins/opentelemetry/
+  See also: infra/observability/otel-collector-config.yaml
+#}
+{% if otel_collector_endpoint | default('') %}
+- id: opentelemetry
+  resource:
+    service.name: {{ otel_service_name | default('apisix-gateway') | tojson }}
+  collector:
+    address: {{ otel_collector_endpoint | tojson }}
+    request_timeout: 3
+  # Let OpenTelemetry generate trace IDs (x-request-id is captured as attribute)
+  # Enable nginx variables for trace_id access in logs (for log-trace correlation)
+  set_ngx_var: true
+  batch_span_processor:
+    drop_on_queue_full: false
+    max_queue_size: 2048
+    batch_timeout: 5
+    inactive_timeout: 2
+    max_export_batch_size: 16
+  trace_sampler:
+    name: "trace_id_ratio"  # Use trace_id_ratio to apply fraction-based sampling
+    options:
+      fraction: {{ otel_sample_rate | default(1.0) }}
+  # Capture correlation and Azure-specific headers as span attributes
+  additional_header_prefix_attributes:
+    - "x-request-id"
+    - "x-conversation-id"
+    - "x-ms-client-request-id"
+    - "x-ms-region"
+{% endif %}

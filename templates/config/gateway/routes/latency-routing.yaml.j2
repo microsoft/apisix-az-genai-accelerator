@@ -1,0 +1,58 @@
+{#
+  Latency routing scenario (APIM parity)
+
+  Two Azure OpenAI backends via ai-proxy-multi. Weights will be rewritten in
+  test mode by the config API sidecar to steer traffic between instances without restarting
+  APISIX. This file is included only when `gateway_e2e_test_mode` is true.
+#}
+
+- name: latency-routing
+  uris:
+    - /latency-routing/openai/deployments/*/completions
+    - /latency-routing/openai/deployments/*/chat/completions
+    - /latency-routing/openai/deployments/*/embeddings
+  methods: [POST]
+  plugins:
+    request-id:
+      algorithm: uuid
+      header_name: X-Request-ID
+      include_in_response: true
+    {# APIM gateway logging metadata #}
+    {% set apim_gateway_operation_name = "latency-routing" %}
+    {% set apim_gateway_api_id = "latency-routing" %}
+    {% set apim_gateway_product_id = gateway_product_id | default('') %}
+
+{% filter indent(width=4, first=True, blank=True) %}
+{% include "plugins/apim-gateway-logger.yaml.j2" %}
+{% include "auth/azure-openai-auth.yaml.j2" %}
+{% include "auth/oidc-auth.yaml.j2" %}
+{% include "plugins/cors.yaml.j2" %}
+{% include "plugins/rate-limit.yaml.j2" %}
+{% include "plugins/quota-limit.yaml.j2" %}
+{% include "plugins/ai-rate-limit.yaml.j2" %}
+{% include "plugins/apim-priority-headers.yaml.j2" %}
+{% include "plugins/ip-restriction.yaml.j2" %}
+{% include "plugins/response-rewrite.yaml.j2" %}
+{% include "plugins/cache.yaml.j2" %}
+{% include "plugins/proxy-buffering.yaml.j2" %}
+{% include "plugins/proxy-control.yaml.j2" %}
+{% include "plugins/opentelemetry.yaml.j2" %}
+proxy-rewrite:
+  regex_uri:
+    - "^/latency-routing(/openai/.*)$"
+    - "$1"
+{% include "plugins/ai-proxy.yaml.j2" %}
+{% endfilter %}
+
+    prometheus:
+      prefer_name: true
+
+    file-logger:
+      path: "/usr/local/apisix/logs/genai_access.json"
+      include_req_body: false
+      include_resp_body: false
+
+  # Dummy upstream required by APISIX schema; ai-proxy-multi drives real routing
+  upstream:
+    nodes: { "127.0.0.1:1": 1 }
+    type: roundrobin

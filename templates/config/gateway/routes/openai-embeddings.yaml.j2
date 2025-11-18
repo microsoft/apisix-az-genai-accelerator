@@ -1,0 +1,80 @@
+{#
+  Azure OpenAI Embeddings Route
+
+  Dedicated route for Azure OpenAI embeddings requests. Mirrors the
+  authentication, policy, and observability stack used by chat completions
+  while keeping buffering behavior optimized for non-streaming workloads.
+
+  Supported URIs:
+    - /openai/deployments/*/embeddings (Legacy Azure style)
+    - /openai/v1/embeddings             (New Azure v1 style)
+
+  Environment Variables:
+    Backend Configuration (indexed, e.g., _0, _1, _2...):
+      - AZURE_OPENAI_ENDPOINT_N: Backend endpoint URL (required)
+      - AZURE_OPENAI_KEY_N: Backend API key (required)
+      - AZURE_OPENAI_PRIORITY_N: Backend priority (default: 5)
+      - AZURE_OPENAI_WEIGHT_N: Backend weight (default: 1)
+
+    Authentication (see templates/auth/ for details):
+      - GATEWAY_REQUIRE_AUTH: Enable authentication (true/false)
+      - ENABLE_OIDC: Enable Azure AD OIDC (true/false)
+
+    Plugins (see templates/plugins/ for details):
+      - ENABLE_CORS: Enable CORS (true/false)
+      - ENABLE_RATE_LIMIT: Enable rate limiting (true/false)
+      - ENABLE_QUOTA: Enable quota limiting (true/false)
+      - ENABLE_IP_RESTRICTION: Enable IP filtering (true/false)
+      - ENABLE_RESPONSE_REWRITE: Enable security headers (true/false)
+      - ENABLE_CACHE: Enable response caching (true/false)
+
+  See: https://apisix.apache.org/docs/apisix/plugins/ai-proxy-multi/
+#}
+
+# Azure OpenAI embeddings (Azure-only: legacy + v1)
+- id: azure_openai_embeddings
+  uris:
+    - /openai/deployments/*/embeddings      # Legacy Azure style
+    - /openai/v1/embeddings                 # New Azure v1 style
+  methods: [POST]
+  plugins:
+    # Request correlation
+    request-id:
+      algorithm: uuid
+      header_name: X-Request-ID
+      include_in_response: true
+    {# APIM gateway logging metadata #}
+    {% set apim_gateway_operation_name = "embeddings" %}
+    {% set apim_gateway_api_id = "openai-embeddings" %}
+    {% set apim_gateway_product_id = gateway_product_id | default('') %}
+
+{% filter indent(width=4, first=True, blank=True) %}
+{% include "plugins/apim-gateway-logger.yaml.j2" %}
+{% include "auth/azure-openai-auth.yaml.j2" %}
+{% include "auth/oidc-auth.yaml.j2" %}
+{% include "plugins/cors.yaml.j2" %}
+{% include "plugins/rate-limit.yaml.j2" %}
+{% include "plugins/quota-limit.yaml.j2" %}
+{% include "plugins/ai-rate-limit.yaml.j2" %}
+{% include "plugins/apim-priority-headers.yaml.j2" %}
+{% include "plugins/ip-restriction.yaml.j2" %}
+{% include "plugins/response-rewrite.yaml.j2" %}
+{% include "plugins/cache.yaml.j2" %}
+{% include "plugins/opentelemetry.yaml.j2" %}
+{% include "plugins/ai-proxy.yaml.j2" %}
+{% endfilter %}
+
+    # Prometheus metrics with rich labels (route, consumer, status, etc.)
+    # See: https://apisix.apache.org/docs/apisix/plugins/prometheus/
+    prometheus:
+      prefer_name: true  # Use route/consumer names instead of IDs in labels
+
+    # Structured JSON logging for GenAI analytics (non-streaming)
+    file-logger:
+      path: "/usr/local/apisix/logs/genai_access.json"
+      include_req_body: false
+      include_resp_body: false
+
+  upstream:
+    nodes: { "127.0.0.1:1": 1 }
+    type: roundrobin

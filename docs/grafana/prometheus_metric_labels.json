@@ -1,0 +1,3204 @@
+{
+  "apisix_bandwidth_total": {
+    "labels": [
+      {
+        "description": "Metric name stored as the Prometheus `__name__` label.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/data_model.md"
+          }
+        ],
+        "name": "__name__",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector identifying the APISIX cluster.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:203",
+            "type": "repo_file"
+          }
+        ],
+        "name": "cluster",
+        "value_type": "string"
+      },
+      {
+        "description": "Name of the Consumer associated with a request. Default to an empty string if no Consumer is associated with the request.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "consumer",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector indicating the deployment environment.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:204",
+            "type": "repo_file"
+          }
+        ],
+        "name": "environment",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus instance label identifying the scraped endpoint (typically host:port).",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "instance",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus job label identifying a group of scrape targets.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "job",
+        "value_type": "string"
+      },
+      {
+        "description": "For non-traditional_http requests, name of the llm_model",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          },
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:186",
+            "type": "repo_file"
+          }
+        ],
+        "name": "llm_model",
+        "value_type": "string"
+      },
+      {
+        "description": "IP address of the upstream node.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "node",
+        "value_type": "string"
+      },
+      {
+        "description": "LLM model requested by the client before APISIX applies routing or retries.",
+        "documentation": [
+          {
+            "path": "gateway/lua/apisix/plugins/ai-drivers/dynamic-azure-openai.lua:200",
+            "type": "repo_file"
+          }
+        ],
+        "name": "request_llm_model",
+        "value_type": "string"
+      },
+      {
+        "description": "traditional_http / ai_chat / ai_stream",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "request_type",
+        "value_type": "string"
+      },
+      {
+        "description": "ID of the Route that the HTTP status originates from when `prefer_name` is `false` (default), and name of the Route when `prefer_name` to `true`. Default to an empty string if a request does not match any Route.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "route",
+        "value_type": "string"
+      },
+      {
+        "description": "Type of traffic, `egress` or `ingress`.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "type",
+        "value_type": "string"
+      }
+    ],
+    "metric": {
+      "description": "Total amount of traffic flowing through APISIX in bytes.",
+      "documentation": [
+        {
+          "type": "url",
+          "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+        }
+      ],
+      "name": "apisix_bandwidth_total",
+      "type": "counter",
+      "unit": "bytes"
+    }
+  },
+  "apisix_http_latency_bucket": {
+    "labels": [
+      {
+        "description": "Metric name stored as the Prometheus `__name__` label.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/data_model.md"
+          }
+        ],
+        "name": "__name__",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector identifying the APISIX cluster.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:203",
+            "type": "repo_file"
+          }
+        ],
+        "name": "cluster",
+        "value_type": "string"
+      },
+      {
+        "description": "Name of the Consumer associated with a request. Default to an empty string if no Consumer is associated with the request.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "consumer",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector indicating the deployment environment.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:204",
+            "type": "repo_file"
+          }
+        ],
+        "name": "environment",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus instance label identifying the scraped endpoint (typically host:port).",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "instance",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus job label identifying a group of scrape targets.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "job",
+        "value_type": "string"
+      },
+      {
+        "description": "Label documentation not found.",
+        "name": "le",
+        "value_type": "string"
+      },
+      {
+        "description": "For non-traditional_http requests, name of the llm_model",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          },
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:186",
+            "type": "repo_file"
+          }
+        ],
+        "name": "llm_model",
+        "value_type": "string"
+      },
+      {
+        "description": "IP address of the upstream node.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "node",
+        "value_type": "string"
+      },
+      {
+        "description": "LLM model requested by the client before APISIX applies routing or retries.",
+        "documentation": [
+          {
+            "path": "gateway/lua/apisix/plugins/ai-drivers/dynamic-azure-openai.lua:200",
+            "type": "repo_file"
+          }
+        ],
+        "name": "request_llm_model",
+        "value_type": "string"
+      },
+      {
+        "description": "traditional_http / ai_chat / ai_stream",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "request_type",
+        "value_type": "string"
+      },
+      {
+        "description": "ID of the Route that the HTTP status originates from when `prefer_name` is `false` (default), and name of the Route when `prefer_name` to `true`. Default to an empty string if a request does not match any Route.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "route",
+        "value_type": "string"
+      },
+      {
+        "description": "Type of traffic, `egress` or `ingress`.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "type",
+        "value_type": "string"
+      }
+    ],
+    "metric": {
+      "description": "HTTP request latency in milliseconds.",
+      "documentation": [
+        {
+          "type": "url",
+          "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+        }
+      ],
+      "histogram_component": "bucket",
+      "name": "apisix_http_latency_bucket",
+      "type": "histogram_bucket",
+      "unit": "milliseconds"
+    }
+  },
+  "apisix_http_latency_count": {
+    "labels": [
+      {
+        "description": "Metric name stored as the Prometheus `__name__` label.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/data_model.md"
+          }
+        ],
+        "name": "__name__",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector identifying the APISIX cluster.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:203",
+            "type": "repo_file"
+          }
+        ],
+        "name": "cluster",
+        "value_type": "string"
+      },
+      {
+        "description": "Name of the Consumer associated with a request. Default to an empty string if no Consumer is associated with the request.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "consumer",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector indicating the deployment environment.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:204",
+            "type": "repo_file"
+          }
+        ],
+        "name": "environment",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus instance label identifying the scraped endpoint (typically host:port).",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "instance",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus job label identifying a group of scrape targets.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "job",
+        "value_type": "string"
+      },
+      {
+        "description": "For non-traditional_http requests, name of the llm_model",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          },
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:186",
+            "type": "repo_file"
+          }
+        ],
+        "name": "llm_model",
+        "value_type": "string"
+      },
+      {
+        "description": "IP address of the upstream node.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "node",
+        "value_type": "string"
+      },
+      {
+        "description": "LLM model requested by the client before APISIX applies routing or retries.",
+        "documentation": [
+          {
+            "path": "gateway/lua/apisix/plugins/ai-drivers/dynamic-azure-openai.lua:200",
+            "type": "repo_file"
+          }
+        ],
+        "name": "request_llm_model",
+        "value_type": "string"
+      },
+      {
+        "description": "traditional_http / ai_chat / ai_stream",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "request_type",
+        "value_type": "string"
+      },
+      {
+        "description": "ID of the Route that the HTTP status originates from when `prefer_name` is `false` (default), and name of the Route when `prefer_name` to `true`. Default to an empty string if a request does not match any Route.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "route",
+        "value_type": "string"
+      },
+      {
+        "description": "Type of traffic, `egress` or `ingress`.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "type",
+        "value_type": "string"
+      }
+    ],
+    "metric": {
+      "description": "HTTP request latency in milliseconds.",
+      "documentation": [
+        {
+          "type": "url",
+          "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+        }
+      ],
+      "histogram_component": "count",
+      "name": "apisix_http_latency_count",
+      "type": "histogram_count",
+      "unit": "milliseconds"
+    }
+  },
+  "apisix_http_latency_sum": {
+    "labels": [
+      {
+        "description": "Metric name stored as the Prometheus `__name__` label.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/data_model.md"
+          }
+        ],
+        "name": "__name__",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector identifying the APISIX cluster.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:203",
+            "type": "repo_file"
+          }
+        ],
+        "name": "cluster",
+        "value_type": "string"
+      },
+      {
+        "description": "Name of the Consumer associated with a request. Default to an empty string if no Consumer is associated with the request.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "consumer",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector indicating the deployment environment.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:204",
+            "type": "repo_file"
+          }
+        ],
+        "name": "environment",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus instance label identifying the scraped endpoint (typically host:port).",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "instance",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus job label identifying a group of scrape targets.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "job",
+        "value_type": "string"
+      },
+      {
+        "description": "For non-traditional_http requests, name of the llm_model",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          },
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:186",
+            "type": "repo_file"
+          }
+        ],
+        "name": "llm_model",
+        "value_type": "string"
+      },
+      {
+        "description": "IP address of the upstream node.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "node",
+        "value_type": "string"
+      },
+      {
+        "description": "LLM model requested by the client before APISIX applies routing or retries.",
+        "documentation": [
+          {
+            "path": "gateway/lua/apisix/plugins/ai-drivers/dynamic-azure-openai.lua:200",
+            "type": "repo_file"
+          }
+        ],
+        "name": "request_llm_model",
+        "value_type": "string"
+      },
+      {
+        "description": "traditional_http / ai_chat / ai_stream",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "request_type",
+        "value_type": "string"
+      },
+      {
+        "description": "ID of the Route that the HTTP status originates from when `prefer_name` is `false` (default), and name of the Route when `prefer_name` to `true`. Default to an empty string if a request does not match any Route.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "route",
+        "value_type": "string"
+      },
+      {
+        "description": "Type of traffic, `egress` or `ingress`.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "type",
+        "value_type": "string"
+      }
+    ],
+    "metric": {
+      "description": "HTTP request latency in milliseconds.",
+      "documentation": [
+        {
+          "type": "url",
+          "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+        }
+      ],
+      "histogram_component": "sum",
+      "name": "apisix_http_latency_sum",
+      "type": "histogram_sum",
+      "unit": "milliseconds"
+    }
+  },
+  "apisix_http_requests_total": {
+    "labels": [
+      {
+        "description": "Metric name stored as the Prometheus `__name__` label.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/data_model.md"
+          }
+        ],
+        "name": "__name__",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector identifying the APISIX cluster.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:203",
+            "type": "repo_file"
+          }
+        ],
+        "name": "cluster",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector indicating the deployment environment.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:204",
+            "type": "repo_file"
+          }
+        ],
+        "name": "environment",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus instance label identifying the scraped endpoint (typically host:port).",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "instance",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus job label identifying a group of scrape targets.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "job",
+        "value_type": "string"
+      }
+    ],
+    "metric": {
+      "description": "Metric documentation not found in source references.",
+      "documentation": [],
+      "name": "apisix_http_requests_total",
+      "type": "gauge"
+    }
+  },
+  "apisix_http_status_total": {
+    "labels": [
+      {
+        "description": "Metric name stored as the Prometheus `__name__` label.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/data_model.md"
+          }
+        ],
+        "name": "__name__",
+        "value_type": "string"
+      },
+      {
+        "description": "HTTP status code returned by the upstream backend before APISIX retries another endpoint.",
+        "documentation": [
+          {
+            "path": "templates/config/gateway/config.yaml.j2:134",
+            "type": "repo_file"
+          },
+          {
+            "path": "gateway/lua/apisix/plugins/ai-drivers/dynamic-azure-openai.lua:25",
+            "type": "repo_file"
+          }
+        ],
+        "name": "backend_error_status",
+        "value_type": "string"
+      },
+      {
+        "description": "Identifier of the upstream backend (Azure OpenAI resource host) handling the request.",
+        "documentation": [
+          {
+            "path": "templates/config/gateway/config.yaml.j2:134",
+            "type": "repo_file"
+          },
+          {
+            "path": "gateway/lua/apisix/plugins/ai-drivers/dynamic-azure-openai.lua:25",
+            "type": "repo_file"
+          }
+        ],
+        "name": "backend_identifier",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector identifying the APISIX cluster.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:203",
+            "type": "repo_file"
+          }
+        ],
+        "name": "cluster",
+        "value_type": "string"
+      },
+      {
+        "description": "HTTP response code returned by the upstream node.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "code",
+        "value_type": "string"
+      },
+      {
+        "description": "Name of the Consumer associated with a request. Default to an empty string if no Consumer is associated with the request.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "consumer",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector indicating the deployment environment.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:204",
+            "type": "repo_file"
+          }
+        ],
+        "name": "environment",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus instance label identifying the scraped endpoint (typically host:port).",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "instance",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus job label identifying a group of scrape targets.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "job",
+        "value_type": "string"
+      },
+      {
+        "description": "For non-traditional_http requests, name of the llm_model",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          },
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:186",
+            "type": "repo_file"
+          }
+        ],
+        "name": "llm_model",
+        "value_type": "string"
+      },
+      {
+        "description": "URI of the Route that matches the request. Default to an empty string if a request does not match any Route.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "matched_uri",
+        "value_type": "string"
+      },
+      {
+        "description": "IP address of the upstream node.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "node",
+        "value_type": "string"
+      },
+      {
+        "description": "LLM model requested by the client before APISIX applies routing or retries.",
+        "documentation": [
+          {
+            "path": "gateway/lua/apisix/plugins/ai-drivers/dynamic-azure-openai.lua:200",
+            "type": "repo_file"
+          }
+        ],
+        "name": "request_llm_model",
+        "value_type": "string"
+      },
+      {
+        "description": "traditional_http / ai_chat / ai_stream",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "request_type",
+        "value_type": "string"
+      },
+      {
+        "description": "ID of the Route that the HTTP status originates from when `prefer_name` is `false` (default), and name of the Route when `prefer_name` to `true`. Default to an empty string if a request does not match any Route.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "route",
+        "value_type": "string"
+      }
+    ],
+    "metric": {
+      "description": "HTTP status codes returned from upstream Services.",
+      "documentation": [
+        {
+          "type": "url",
+          "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+        }
+      ],
+      "name": "apisix_http_status_total",
+      "type": "counter"
+    }
+  },
+  "apisix_llm_active_connections": {
+    "labels": [
+      {
+        "description": "Metric name stored as the Prometheus `__name__` label.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/data_model.md"
+          }
+        ],
+        "name": "__name__",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector identifying the APISIX cluster.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:203",
+            "type": "repo_file"
+          }
+        ],
+        "name": "cluster",
+        "value_type": "string"
+      },
+      {
+        "description": "Name of the Consumer associated with a request. Default to an empty string if no Consumer is associated with the request.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "consumer",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector indicating the deployment environment.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:204",
+            "type": "repo_file"
+          }
+        ],
+        "name": "environment",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus instance label identifying the scraped endpoint (typically host:port).",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "instance",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus job label identifying a group of scrape targets.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "job",
+        "value_type": "string"
+      },
+      {
+        "description": "For non-traditional_http requests, name of the llm_model",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          },
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:186",
+            "type": "repo_file"
+          }
+        ],
+        "name": "llm_model",
+        "value_type": "string"
+      },
+      {
+        "description": "URI of the Route that matches the request. Default to an empty string if a request does not match any Route.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "matched_uri",
+        "value_type": "string"
+      },
+      {
+        "description": "IP address of the upstream node.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "node",
+        "value_type": "string"
+      },
+      {
+        "description": "LLM model requested by the client before APISIX applies routing or retries.",
+        "documentation": [
+          {
+            "path": "gateway/lua/apisix/plugins/ai-drivers/dynamic-azure-openai.lua:200",
+            "type": "repo_file"
+          }
+        ],
+        "name": "request_llm_model",
+        "value_type": "string"
+      },
+      {
+        "description": "traditional_http / ai_chat / ai_stream",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "request_type",
+        "value_type": "string"
+      },
+      {
+        "description": "ID of the Route that bandwidth corresponds to when `prefer_name` is `false` (default), and name of the Route when `prefer_name` to `true`. Default to an empty string if a request does not match any Route.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "route_id",
+        "value_type": "string"
+      }
+    ],
+    "metric": {
+      "description": "Number of active connections to LLM service",
+      "documentation": [
+        {
+          "type": "url",
+          "url": "https://raw.githubusercontent.com/apache/apisix/master/apisix/plugins/prometheus/exporter.lua"
+        }
+      ],
+      "name": "apisix_llm_active_connections",
+      "type": "gauge",
+      "unit": "connections"
+    }
+  },
+  "apisix_llm_completion_tokens_total": {
+    "labels": [
+      {
+        "description": "Metric name stored as the Prometheus `__name__` label.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/data_model.md"
+          }
+        ],
+        "name": "__name__",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector identifying the APISIX cluster.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:203",
+            "type": "repo_file"
+          }
+        ],
+        "name": "cluster",
+        "value_type": "string"
+      },
+      {
+        "description": "Name of the Consumer associated with a request. Default to an empty string if no Consumer is associated with the request.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "consumer",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector indicating the deployment environment.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:204",
+            "type": "repo_file"
+          }
+        ],
+        "name": "environment",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus instance label identifying the scraped endpoint (typically host:port).",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "instance",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus job label identifying a group of scrape targets.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "job",
+        "value_type": "string"
+      },
+      {
+        "description": "For non-traditional_http requests, name of the llm_model",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          },
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:186",
+            "type": "repo_file"
+          }
+        ],
+        "name": "llm_model",
+        "value_type": "string"
+      },
+      {
+        "description": "IP address of the upstream node.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "node",
+        "value_type": "string"
+      },
+      {
+        "description": "LLM model requested by the client before APISIX applies routing or retries.",
+        "documentation": [
+          {
+            "path": "gateway/lua/apisix/plugins/ai-drivers/dynamic-azure-openai.lua:200",
+            "type": "repo_file"
+          }
+        ],
+        "name": "request_llm_model",
+        "value_type": "string"
+      },
+      {
+        "description": "traditional_http / ai_chat / ai_stream",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "request_type",
+        "value_type": "string"
+      },
+      {
+        "description": "ID of the Route that bandwidth corresponds to when `prefer_name` is `false` (default), and name of the Route when `prefer_name` to `true`. Default to an empty string if a request does not match any Route.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "route_id",
+        "value_type": "string"
+      }
+    ],
+    "metric": {
+      "description": "LLM service consumed completion tokens",
+      "documentation": [
+        {
+          "type": "url",
+          "url": "https://raw.githubusercontent.com/apache/apisix/master/apisix/plugins/prometheus/exporter.lua"
+        }
+      ],
+      "name": "apisix_llm_completion_tokens_total",
+      "type": "counter",
+      "unit": "tokens"
+    }
+  },
+  "apisix_llm_latency_bucket": {
+    "labels": [
+      {
+        "description": "Metric name stored as the Prometheus `__name__` label.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/data_model.md"
+          }
+        ],
+        "name": "__name__",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector identifying the APISIX cluster.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:203",
+            "type": "repo_file"
+          }
+        ],
+        "name": "cluster",
+        "value_type": "string"
+      },
+      {
+        "description": "Name of the Consumer associated with a request. Default to an empty string if no Consumer is associated with the request.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "consumer",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector indicating the deployment environment.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:204",
+            "type": "repo_file"
+          }
+        ],
+        "name": "environment",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus instance label identifying the scraped endpoint (typically host:port).",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "instance",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus job label identifying a group of scrape targets.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "job",
+        "value_type": "string"
+      },
+      {
+        "description": "Label documentation not found.",
+        "name": "le",
+        "value_type": "string"
+      },
+      {
+        "description": "For non-traditional_http requests, name of the llm_model",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          },
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:186",
+            "type": "repo_file"
+          }
+        ],
+        "name": "llm_model",
+        "value_type": "string"
+      },
+      {
+        "description": "IP address of the upstream node.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "node",
+        "value_type": "string"
+      },
+      {
+        "description": "LLM model requested by the client before APISIX applies routing or retries.",
+        "documentation": [
+          {
+            "path": "gateway/lua/apisix/plugins/ai-drivers/dynamic-azure-openai.lua:200",
+            "type": "repo_file"
+          }
+        ],
+        "name": "request_llm_model",
+        "value_type": "string"
+      },
+      {
+        "description": "traditional_http / ai_chat / ai_stream",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "request_type",
+        "value_type": "string"
+      },
+      {
+        "description": "ID of the Route that bandwidth corresponds to when `prefer_name` is `false` (default), and name of the Route when `prefer_name` to `true`. Default to an empty string if a request does not match any Route.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "route_id",
+        "value_type": "string"
+      }
+    ],
+    "metric": {
+      "description": "LLM request latency in milliseconds",
+      "documentation": [
+        {
+          "type": "url",
+          "url": "https://raw.githubusercontent.com/apache/apisix/master/apisix/plugins/prometheus/exporter.lua"
+        }
+      ],
+      "histogram_component": "bucket",
+      "name": "apisix_llm_latency_bucket",
+      "type": "histogram_bucket",
+      "unit": "milliseconds"
+    }
+  },
+  "apisix_llm_latency_count": {
+    "labels": [
+      {
+        "description": "Metric name stored as the Prometheus `__name__` label.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/data_model.md"
+          }
+        ],
+        "name": "__name__",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector identifying the APISIX cluster.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:203",
+            "type": "repo_file"
+          }
+        ],
+        "name": "cluster",
+        "value_type": "string"
+      },
+      {
+        "description": "Name of the Consumer associated with a request. Default to an empty string if no Consumer is associated with the request.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "consumer",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector indicating the deployment environment.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:204",
+            "type": "repo_file"
+          }
+        ],
+        "name": "environment",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus instance label identifying the scraped endpoint (typically host:port).",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "instance",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus job label identifying a group of scrape targets.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "job",
+        "value_type": "string"
+      },
+      {
+        "description": "For non-traditional_http requests, name of the llm_model",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          },
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:186",
+            "type": "repo_file"
+          }
+        ],
+        "name": "llm_model",
+        "value_type": "string"
+      },
+      {
+        "description": "IP address of the upstream node.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "node",
+        "value_type": "string"
+      },
+      {
+        "description": "LLM model requested by the client before APISIX applies routing or retries.",
+        "documentation": [
+          {
+            "path": "gateway/lua/apisix/plugins/ai-drivers/dynamic-azure-openai.lua:200",
+            "type": "repo_file"
+          }
+        ],
+        "name": "request_llm_model",
+        "value_type": "string"
+      },
+      {
+        "description": "traditional_http / ai_chat / ai_stream",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "request_type",
+        "value_type": "string"
+      },
+      {
+        "description": "ID of the Route that bandwidth corresponds to when `prefer_name` is `false` (default), and name of the Route when `prefer_name` to `true`. Default to an empty string if a request does not match any Route.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "route_id",
+        "value_type": "string"
+      }
+    ],
+    "metric": {
+      "description": "LLM request latency in milliseconds",
+      "documentation": [
+        {
+          "type": "url",
+          "url": "https://raw.githubusercontent.com/apache/apisix/master/apisix/plugins/prometheus/exporter.lua"
+        }
+      ],
+      "histogram_component": "count",
+      "name": "apisix_llm_latency_count",
+      "type": "histogram_count",
+      "unit": "milliseconds"
+    }
+  },
+  "apisix_llm_latency_sum": {
+    "labels": [
+      {
+        "description": "Metric name stored as the Prometheus `__name__` label.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/data_model.md"
+          }
+        ],
+        "name": "__name__",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector identifying the APISIX cluster.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:203",
+            "type": "repo_file"
+          }
+        ],
+        "name": "cluster",
+        "value_type": "string"
+      },
+      {
+        "description": "Name of the Consumer associated with a request. Default to an empty string if no Consumer is associated with the request.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "consumer",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector indicating the deployment environment.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:204",
+            "type": "repo_file"
+          }
+        ],
+        "name": "environment",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus instance label identifying the scraped endpoint (typically host:port).",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "instance",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus job label identifying a group of scrape targets.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "job",
+        "value_type": "string"
+      },
+      {
+        "description": "For non-traditional_http requests, name of the llm_model",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          },
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:186",
+            "type": "repo_file"
+          }
+        ],
+        "name": "llm_model",
+        "value_type": "string"
+      },
+      {
+        "description": "IP address of the upstream node.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "node",
+        "value_type": "string"
+      },
+      {
+        "description": "LLM model requested by the client before APISIX applies routing or retries.",
+        "documentation": [
+          {
+            "path": "gateway/lua/apisix/plugins/ai-drivers/dynamic-azure-openai.lua:200",
+            "type": "repo_file"
+          }
+        ],
+        "name": "request_llm_model",
+        "value_type": "string"
+      },
+      {
+        "description": "traditional_http / ai_chat / ai_stream",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "request_type",
+        "value_type": "string"
+      },
+      {
+        "description": "ID of the Route that bandwidth corresponds to when `prefer_name` is `false` (default), and name of the Route when `prefer_name` to `true`. Default to an empty string if a request does not match any Route.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "route_id",
+        "value_type": "string"
+      }
+    ],
+    "metric": {
+      "description": "LLM request latency in milliseconds",
+      "documentation": [
+        {
+          "type": "url",
+          "url": "https://raw.githubusercontent.com/apache/apisix/master/apisix/plugins/prometheus/exporter.lua"
+        }
+      ],
+      "histogram_component": "sum",
+      "name": "apisix_llm_latency_sum",
+      "type": "histogram_sum",
+      "unit": "milliseconds"
+    }
+  },
+  "apisix_llm_prompt_tokens_total": {
+    "labels": [
+      {
+        "description": "Metric name stored as the Prometheus `__name__` label.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/data_model.md"
+          }
+        ],
+        "name": "__name__",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector identifying the APISIX cluster.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:203",
+            "type": "repo_file"
+          }
+        ],
+        "name": "cluster",
+        "value_type": "string"
+      },
+      {
+        "description": "Name of the Consumer associated with a request. Default to an empty string if no Consumer is associated with the request.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "consumer",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector indicating the deployment environment.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:204",
+            "type": "repo_file"
+          }
+        ],
+        "name": "environment",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus instance label identifying the scraped endpoint (typically host:port).",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "instance",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus job label identifying a group of scrape targets.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "job",
+        "value_type": "string"
+      },
+      {
+        "description": "For non-traditional_http requests, name of the llm_model",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          },
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:186",
+            "type": "repo_file"
+          }
+        ],
+        "name": "llm_model",
+        "value_type": "string"
+      },
+      {
+        "description": "IP address of the upstream node.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "node",
+        "value_type": "string"
+      },
+      {
+        "description": "LLM model requested by the client before APISIX applies routing or retries.",
+        "documentation": [
+          {
+            "path": "gateway/lua/apisix/plugins/ai-drivers/dynamic-azure-openai.lua:200",
+            "type": "repo_file"
+          }
+        ],
+        "name": "request_llm_model",
+        "value_type": "string"
+      },
+      {
+        "description": "traditional_http / ai_chat / ai_stream",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "request_type",
+        "value_type": "string"
+      },
+      {
+        "description": "ID of the Route that bandwidth corresponds to when `prefer_name` is `false` (default), and name of the Route when `prefer_name` to `true`. Default to an empty string if a request does not match any Route.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "route_id",
+        "value_type": "string"
+      }
+    ],
+    "metric": {
+      "description": "LLM service consumed prompt tokens",
+      "documentation": [
+        {
+          "type": "url",
+          "url": "https://raw.githubusercontent.com/apache/apisix/master/apisix/plugins/prometheus/exporter.lua"
+        }
+      ],
+      "name": "apisix_llm_prompt_tokens_total",
+      "type": "counter",
+      "unit": "tokens"
+    }
+  },
+  "apisix_nginx_http_current_connections": {
+    "labels": [
+      {
+        "description": "Metric name stored as the Prometheus `__name__` label.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/data_model.md"
+          }
+        ],
+        "name": "__name__",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector identifying the APISIX cluster.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:203",
+            "type": "repo_file"
+          }
+        ],
+        "name": "cluster",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector indicating the deployment environment.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:204",
+            "type": "repo_file"
+          }
+        ],
+        "name": "environment",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus instance label identifying the scraped endpoint (typically host:port).",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "instance",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus job label identifying a group of scrape targets.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "job",
+        "value_type": "string"
+      },
+      {
+        "description": "Connection state reported by the APISIX NGINX metrics exporter.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "state",
+        "value_type": "string"
+      }
+    ],
+    "metric": {
+      "description": "Number of current connections with clients.",
+      "documentation": [
+        {
+          "type": "url",
+          "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+        }
+      ],
+      "name": "apisix_nginx_http_current_connections",
+      "type": "gauge"
+    }
+  },
+  "apisix_nginx_metric_errors_total": {
+    "labels": [
+      {
+        "description": "Metric name stored as the Prometheus `__name__` label.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/data_model.md"
+          }
+        ],
+        "name": "__name__",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector identifying the APISIX cluster.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:203",
+            "type": "repo_file"
+          }
+        ],
+        "name": "cluster",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector indicating the deployment environment.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:204",
+            "type": "repo_file"
+          }
+        ],
+        "name": "environment",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus instance label identifying the scraped endpoint (typically host:port).",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "instance",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus job label identifying a group of scrape targets.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "job",
+        "value_type": "string"
+      }
+    ],
+    "metric": {
+      "description": "Metric documentation not found in source references.",
+      "documentation": [],
+      "name": "apisix_nginx_metric_errors_total",
+      "type": "gauge"
+    }
+  },
+  "apisix_node_info": {
+    "labels": [
+      {
+        "description": "Metric name stored as the Prometheus `__name__` label.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/data_model.md"
+          }
+        ],
+        "name": "__name__",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector identifying the APISIX cluster.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:203",
+            "type": "repo_file"
+          }
+        ],
+        "name": "cluster",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector indicating the deployment environment.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:204",
+            "type": "repo_file"
+          }
+        ],
+        "name": "environment",
+        "value_type": "string"
+      },
+      {
+        "description": "Hostname reported on the telemetry resource.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://opentelemetry.io/docs/specs/semconv/resource/"
+          }
+        ],
+        "name": "hostname",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus instance label identifying the scraped endpoint (typically host:port).",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "instance",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus job label identifying a group of scrape targets.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "job",
+        "value_type": "string"
+      },
+      {
+        "description": "Label documentation not found.",
+        "name": "version",
+        "value_type": "string"
+      }
+    ],
+    "metric": {
+      "description": "Information of the APISIX node, such as host name and the current APISIX version.",
+      "documentation": [
+        {
+          "type": "url",
+          "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+        }
+      ],
+      "name": "apisix_node_info",
+      "type": "gauge"
+    }
+  },
+  "apisix_shared_dict_capacity_bytes": {
+    "labels": [
+      {
+        "description": "Metric name stored as the Prometheus `__name__` label.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/data_model.md"
+          }
+        ],
+        "name": "__name__",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector identifying the APISIX cluster.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:203",
+            "type": "repo_file"
+          }
+        ],
+        "name": "cluster",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector indicating the deployment environment.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:204",
+            "type": "repo_file"
+          }
+        ],
+        "name": "environment",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus instance label identifying the scraped endpoint (typically host:port).",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "instance",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus job label identifying a group of scrape targets.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "job",
+        "value_type": "string"
+      },
+      {
+        "description": "Resource ID corresponding to the upstream configured with health checks, such as `/apisix/routes/1` and `/apisix/upstreams/1`.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "name",
+        "value_type": "string"
+      }
+    ],
+    "metric": {
+      "description": "The total capacity of an [NGINX shared dictionary](https://github.com/openresty/lua-nginx-module#ngxshareddict).",
+      "documentation": [
+        {
+          "type": "url",
+          "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+        }
+      ],
+      "name": "apisix_shared_dict_capacity_bytes",
+      "type": "gauge"
+    }
+  },
+  "apisix_shared_dict_free_space_bytes": {
+    "labels": [
+      {
+        "description": "Metric name stored as the Prometheus `__name__` label.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/data_model.md"
+          }
+        ],
+        "name": "__name__",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector identifying the APISIX cluster.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:203",
+            "type": "repo_file"
+          }
+        ],
+        "name": "cluster",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector indicating the deployment environment.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:204",
+            "type": "repo_file"
+          }
+        ],
+        "name": "environment",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus instance label identifying the scraped endpoint (typically host:port).",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "instance",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus job label identifying a group of scrape targets.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "job",
+        "value_type": "string"
+      },
+      {
+        "description": "Resource ID corresponding to the upstream configured with health checks, such as `/apisix/routes/1` and `/apisix/upstreams/1`.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+          }
+        ],
+        "name": "name",
+        "value_type": "string"
+      }
+    ],
+    "metric": {
+      "description": "The remaining space in an [NGINX shared dictionary](https://github.com/openresty/lua-nginx-module#ngxshareddict).",
+      "documentation": [
+        {
+          "type": "url",
+          "url": "https://raw.githubusercontent.com/apache/apisix/master/docs/en/latest/plugins/prometheus.md"
+        }
+      ],
+      "name": "apisix_shared_dict_free_space_bytes",
+      "type": "gauge"
+    }
+  },
+  "llm_cost_usd_total": {
+    "labels": [
+      {
+        "description": "Metric name stored as the Prometheus `__name__` label.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/data_model.md"
+          }
+        ],
+        "name": "__name__",
+        "value_type": "string"
+      }
+    ],
+    "metric": {
+      "description": "Estimated LLM cost in USD derived from token counts via metricstransform.",
+      "documentation": [
+        {
+          "path": "templates/config/otel-collector/config.yaml.j2:112",
+          "type": "repo_file"
+        }
+      ],
+      "name": "llm_cost_usd_total",
+      "type": "counter",
+      "unit": "usd"
+    }
+  },
+  "scrape_duration_seconds": {
+    "labels": [
+      {
+        "description": "Metric name stored as the Prometheus `__name__` label.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/data_model.md"
+          }
+        ],
+        "name": "__name__",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector identifying the APISIX cluster.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:203",
+            "type": "repo_file"
+          }
+        ],
+        "name": "cluster",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector indicating the deployment environment.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:204",
+            "type": "repo_file"
+          }
+        ],
+        "name": "environment",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus instance label identifying the scraped endpoint (typically host:port).",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "instance",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus job label identifying a group of scrape targets.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "job",
+        "value_type": "string"
+      }
+    ],
+    "metric": {
+      "description": "Duration of the scrape.",
+      "documentation": [
+        {
+          "type": "url",
+          "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+        }
+      ],
+      "name": "scrape_duration_seconds",
+      "type": "gauge",
+      "unit": "seconds"
+    }
+  },
+  "scrape_samples_post_metric_relabeling": {
+    "labels": [
+      {
+        "description": "Metric name stored as the Prometheus `__name__` label.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/data_model.md"
+          }
+        ],
+        "name": "__name__",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector identifying the APISIX cluster.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:203",
+            "type": "repo_file"
+          }
+        ],
+        "name": "cluster",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector indicating the deployment environment.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:204",
+            "type": "repo_file"
+          }
+        ],
+        "name": "environment",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus instance label identifying the scraped endpoint (typically host:port).",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "instance",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus job label identifying a group of scrape targets.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "job",
+        "value_type": "string"
+      }
+    ],
+    "metric": {
+      "description": "Number of samples remaining after metric relabeling was applied.",
+      "documentation": [
+        {
+          "type": "url",
+          "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+        }
+      ],
+      "name": "scrape_samples_post_metric_relabeling",
+      "type": "gauge"
+    }
+  },
+  "scrape_samples_scraped": {
+    "labels": [
+      {
+        "description": "Metric name stored as the Prometheus `__name__` label.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/data_model.md"
+          }
+        ],
+        "name": "__name__",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector identifying the APISIX cluster.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:203",
+            "type": "repo_file"
+          }
+        ],
+        "name": "cluster",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector indicating the deployment environment.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:204",
+            "type": "repo_file"
+          }
+        ],
+        "name": "environment",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus instance label identifying the scraped endpoint (typically host:port).",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "instance",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus job label identifying a group of scrape targets.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "job",
+        "value_type": "string"
+      }
+    ],
+    "metric": {
+      "description": "Number of samples the target exposed.",
+      "documentation": [
+        {
+          "type": "url",
+          "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+        }
+      ],
+      "name": "scrape_samples_scraped",
+      "type": "gauge"
+    }
+  },
+  "scrape_series_added": {
+    "labels": [
+      {
+        "description": "Metric name stored as the Prometheus `__name__` label.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/data_model.md"
+          }
+        ],
+        "name": "__name__",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector identifying the APISIX cluster.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:203",
+            "type": "repo_file"
+          }
+        ],
+        "name": "cluster",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector indicating the deployment environment.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:204",
+            "type": "repo_file"
+          }
+        ],
+        "name": "environment",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus instance label identifying the scraped endpoint (typically host:port).",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "instance",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus job label identifying a group of scrape targets.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "job",
+        "value_type": "string"
+      }
+    ],
+    "metric": {
+      "description": "Approximate number of new series in the scrape.",
+      "documentation": [
+        {
+          "type": "url",
+          "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+        }
+      ],
+      "name": "scrape_series_added",
+      "type": "gauge"
+    }
+  },
+  "target_info": {
+    "labels": [
+      {
+        "description": "Metric name stored as the Prometheus `__name__` label.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/data_model.md"
+          }
+        ],
+        "name": "__name__",
+        "value_type": "string"
+      },
+      {
+        "description": "Cloud platform attribute from OpenTelemetry resource semantic conventions (`cloud.platform`).",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://opentelemetry.io/docs/specs/semconv/resource/"
+          }
+        ],
+        "name": "cloud_platform",
+        "value_type": "string"
+      },
+      {
+        "description": "Cloud provider name per OpenTelemetry resource semantic conventions (`cloud.provider`).",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://opentelemetry.io/docs/specs/semconv/resource/"
+          }
+        ],
+        "name": "cloud_provider",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector identifying the APISIX cluster.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:203",
+            "type": "repo_file"
+          }
+        ],
+        "name": "cluster",
+        "value_type": "string"
+      },
+      {
+        "description": "Resource attribute describing the deployment environment (production, staging, etc.).",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://opentelemetry.io/docs/specs/semconv/resource/"
+          }
+        ],
+        "name": "deployment_environment",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector indicating the deployment environment.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:204",
+            "type": "repo_file"
+          }
+        ],
+        "name": "environment",
+        "value_type": "string"
+      },
+      {
+        "description": "Hostname reported on the telemetry resource.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://opentelemetry.io/docs/specs/semconv/resource/"
+          }
+        ],
+        "name": "hostname",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus instance label identifying the scraped endpoint (typically host:port).",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "instance",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus job label identifying a group of scrape targets.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "job",
+        "value_type": "string"
+      },
+      {
+        "description": "Server port number from OpenTelemetry resource attributes.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://opentelemetry.io/docs/specs/semconv/resource/"
+          }
+        ],
+        "name": "server_port",
+        "value_type": "string"
+      },
+      {
+        "description": "Service version string from resource attributes (`service.version`).",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://opentelemetry.io/docs/specs/semconv/resource/"
+          }
+        ],
+        "name": "service_version",
+        "value_type": "string"
+      },
+      {
+        "description": "Programming language of the telemetry SDK in use.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://opentelemetry.io/docs/specs/semconv/resource/"
+          }
+        ],
+        "name": "telemetry_sdk_language",
+        "value_type": "string"
+      },
+      {
+        "description": "Name of the telemetry SDK implementation.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://opentelemetry.io/docs/specs/semconv/resource/"
+          }
+        ],
+        "name": "telemetry_sdk_name",
+        "value_type": "string"
+      },
+      {
+        "description": "Version of the telemetry SDK implementation.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://opentelemetry.io/docs/specs/semconv/resource/"
+          }
+        ],
+        "name": "telemetry_sdk_version",
+        "value_type": "string"
+      },
+      {
+        "description": "URL scheme (http, https, etc.) recorded in resource attributes.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://opentelemetry.io/docs/specs/semconv/resource/"
+          }
+        ],
+        "name": "url_scheme",
+        "value_type": "string"
+      }
+    ],
+    "metric": {
+      "description": "Target resource attributes exported for each scrape target.",
+      "documentation": [
+        {
+          "type": "url",
+          "url": "https://opentelemetry.io/docs/specs/semconv/resource/"
+        }
+      ],
+      "name": "target_info",
+      "type": "gauge"
+    }
+  },
+  "traces_span_metrics_calls_total": {
+    "labels": [
+      {
+        "description": "Metric name stored as the Prometheus `__name__` label.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/data_model.md"
+          }
+        ],
+        "name": "__name__",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector identifying the APISIX cluster.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:203",
+            "type": "repo_file"
+          }
+        ],
+        "name": "cluster",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector indicating the deployment environment.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:204",
+            "type": "repo_file"
+          }
+        ],
+        "name": "environment",
+        "value_type": "string"
+      },
+      {
+        "description": "HTTP method dimension added by the spanmetrics connector.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:183",
+            "type": "repo_file"
+          }
+        ],
+        "name": "http_method",
+        "value_type": "string"
+      },
+      {
+        "description": "HTTP status code dimension exported with span metrics.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:184",
+            "type": "repo_file"
+          }
+        ],
+        "name": "http_status_code",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus job label identifying a group of scrape targets.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "job",
+        "value_type": "string"
+      },
+      {
+        "description": "Service name taken from span resource attributes.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/open-telemetry/opentelemetry-collector-contrib/main/connector/spanmetricsconnector/README.md"
+          }
+        ],
+        "name": "service_name",
+        "value_type": "string"
+      },
+      {
+        "description": "Span kind (SERVER, CLIENT, etc.) recorded on spans.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/open-telemetry/opentelemetry-collector-contrib/main/connector/spanmetricsconnector/README.md"
+          }
+        ],
+        "name": "span_kind",
+        "value_type": "string"
+      },
+      {
+        "description": "Span name aggregated by the spanmetrics connector.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/open-telemetry/opentelemetry-collector-contrib/main/connector/spanmetricsconnector/README.md"
+          }
+        ],
+        "name": "span_name",
+        "value_type": "string"
+      },
+      {
+        "description": "OpenTelemetry span status code associated with the aggregated spans.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/open-telemetry/opentelemetry-collector-contrib/main/connector/spanmetricsconnector/README.md"
+          }
+        ],
+        "name": "status_code",
+        "value_type": "string"
+      }
+    ],
+    "metric": {
+      "description": "Total span count emitted by the spanmetrics connector.",
+      "documentation": [
+        {
+          "type": "url",
+          "url": "https://raw.githubusercontent.com/open-telemetry/opentelemetry-collector-contrib/main/connector/spanmetricsconnector/README.md"
+        }
+      ],
+      "name": "traces_span_metrics_calls_total",
+      "type": "counter",
+      "unit": "spans"
+    }
+  },
+  "traces_span_metrics_duration_milliseconds_bucket": {
+    "labels": [
+      {
+        "description": "Metric name stored as the Prometheus `__name__` label.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/data_model.md"
+          }
+        ],
+        "name": "__name__",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector identifying the APISIX cluster.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:203",
+            "type": "repo_file"
+          }
+        ],
+        "name": "cluster",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector indicating the deployment environment.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:204",
+            "type": "repo_file"
+          }
+        ],
+        "name": "environment",
+        "value_type": "string"
+      },
+      {
+        "description": "HTTP method dimension added by the spanmetrics connector.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:183",
+            "type": "repo_file"
+          }
+        ],
+        "name": "http_method",
+        "value_type": "string"
+      },
+      {
+        "description": "HTTP status code dimension exported with span metrics.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:184",
+            "type": "repo_file"
+          }
+        ],
+        "name": "http_status_code",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus job label identifying a group of scrape targets.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "job",
+        "value_type": "string"
+      },
+      {
+        "description": "Label documentation not found.",
+        "name": "le",
+        "value_type": "string"
+      },
+      {
+        "description": "Service name taken from span resource attributes.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/open-telemetry/opentelemetry-collector-contrib/main/connector/spanmetricsconnector/README.md"
+          }
+        ],
+        "name": "service_name",
+        "value_type": "string"
+      },
+      {
+        "description": "Span kind (SERVER, CLIENT, etc.) recorded on spans.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/open-telemetry/opentelemetry-collector-contrib/main/connector/spanmetricsconnector/README.md"
+          }
+        ],
+        "name": "span_kind",
+        "value_type": "string"
+      },
+      {
+        "description": "Span name aggregated by the spanmetrics connector.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/open-telemetry/opentelemetry-collector-contrib/main/connector/spanmetricsconnector/README.md"
+          }
+        ],
+        "name": "span_name",
+        "value_type": "string"
+      },
+      {
+        "description": "OpenTelemetry span status code associated with the aggregated spans.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/open-telemetry/opentelemetry-collector-contrib/main/connector/spanmetricsconnector/README.md"
+          }
+        ],
+        "name": "status_code",
+        "value_type": "string"
+      }
+    ],
+    "metric": {
+      "description": "Span duration histogram buckets emitted by the spanmetrics connector.",
+      "documentation": [
+        {
+          "type": "url",
+          "url": "https://raw.githubusercontent.com/open-telemetry/opentelemetry-collector-contrib/main/connector/spanmetricsconnector/README.md"
+        }
+      ],
+      "histogram_component": "bucket",
+      "name": "traces_span_metrics_duration_milliseconds_bucket",
+      "type": "histogram_bucket",
+      "unit": "milliseconds"
+    }
+  },
+  "traces_span_metrics_duration_milliseconds_count": {
+    "labels": [
+      {
+        "description": "Metric name stored as the Prometheus `__name__` label.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/data_model.md"
+          }
+        ],
+        "name": "__name__",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector identifying the APISIX cluster.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:203",
+            "type": "repo_file"
+          }
+        ],
+        "name": "cluster",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector indicating the deployment environment.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:204",
+            "type": "repo_file"
+          }
+        ],
+        "name": "environment",
+        "value_type": "string"
+      },
+      {
+        "description": "HTTP method dimension added by the spanmetrics connector.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:183",
+            "type": "repo_file"
+          }
+        ],
+        "name": "http_method",
+        "value_type": "string"
+      },
+      {
+        "description": "HTTP status code dimension exported with span metrics.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:184",
+            "type": "repo_file"
+          }
+        ],
+        "name": "http_status_code",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus job label identifying a group of scrape targets.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "job",
+        "value_type": "string"
+      },
+      {
+        "description": "Service name taken from span resource attributes.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/open-telemetry/opentelemetry-collector-contrib/main/connector/spanmetricsconnector/README.md"
+          }
+        ],
+        "name": "service_name",
+        "value_type": "string"
+      },
+      {
+        "description": "Span kind (SERVER, CLIENT, etc.) recorded on spans.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/open-telemetry/opentelemetry-collector-contrib/main/connector/spanmetricsconnector/README.md"
+          }
+        ],
+        "name": "span_kind",
+        "value_type": "string"
+      },
+      {
+        "description": "Span name aggregated by the spanmetrics connector.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/open-telemetry/opentelemetry-collector-contrib/main/connector/spanmetricsconnector/README.md"
+          }
+        ],
+        "name": "span_name",
+        "value_type": "string"
+      },
+      {
+        "description": "OpenTelemetry span status code associated with the aggregated spans.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/open-telemetry/opentelemetry-collector-contrib/main/connector/spanmetricsconnector/README.md"
+          }
+        ],
+        "name": "status_code",
+        "value_type": "string"
+      }
+    ],
+    "metric": {
+      "description": "Span duration histogram sample count emitted by the spanmetrics connector.",
+      "documentation": [
+        {
+          "type": "url",
+          "url": "https://raw.githubusercontent.com/open-telemetry/opentelemetry-collector-contrib/main/connector/spanmetricsconnector/README.md"
+        }
+      ],
+      "histogram_component": "count",
+      "name": "traces_span_metrics_duration_milliseconds_count",
+      "type": "histogram_count",
+      "unit": "milliseconds"
+    }
+  },
+  "traces_span_metrics_duration_milliseconds_sum": {
+    "labels": [
+      {
+        "description": "Metric name stored as the Prometheus `__name__` label.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/data_model.md"
+          }
+        ],
+        "name": "__name__",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector identifying the APISIX cluster.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:203",
+            "type": "repo_file"
+          }
+        ],
+        "name": "cluster",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector indicating the deployment environment.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:204",
+            "type": "repo_file"
+          }
+        ],
+        "name": "environment",
+        "value_type": "string"
+      },
+      {
+        "description": "HTTP method dimension added by the spanmetrics connector.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:183",
+            "type": "repo_file"
+          }
+        ],
+        "name": "http_method",
+        "value_type": "string"
+      },
+      {
+        "description": "HTTP status code dimension exported with span metrics.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:184",
+            "type": "repo_file"
+          }
+        ],
+        "name": "http_status_code",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus job label identifying a group of scrape targets.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "job",
+        "value_type": "string"
+      },
+      {
+        "description": "Service name taken from span resource attributes.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/open-telemetry/opentelemetry-collector-contrib/main/connector/spanmetricsconnector/README.md"
+          }
+        ],
+        "name": "service_name",
+        "value_type": "string"
+      },
+      {
+        "description": "Span kind (SERVER, CLIENT, etc.) recorded on spans.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/open-telemetry/opentelemetry-collector-contrib/main/connector/spanmetricsconnector/README.md"
+          }
+        ],
+        "name": "span_kind",
+        "value_type": "string"
+      },
+      {
+        "description": "Span name aggregated by the spanmetrics connector.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/open-telemetry/opentelemetry-collector-contrib/main/connector/spanmetricsconnector/README.md"
+          }
+        ],
+        "name": "span_name",
+        "value_type": "string"
+      },
+      {
+        "description": "OpenTelemetry span status code associated with the aggregated spans.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/open-telemetry/opentelemetry-collector-contrib/main/connector/spanmetricsconnector/README.md"
+          }
+        ],
+        "name": "status_code",
+        "value_type": "string"
+      }
+    ],
+    "metric": {
+      "description": "Cumulative span duration emitted by the spanmetrics connector.",
+      "documentation": [
+        {
+          "type": "url",
+          "url": "https://raw.githubusercontent.com/open-telemetry/opentelemetry-collector-contrib/main/connector/spanmetricsconnector/README.md"
+        }
+      ],
+      "histogram_component": "sum",
+      "name": "traces_span_metrics_duration_milliseconds_sum",
+      "type": "histogram_sum",
+      "unit": "milliseconds"
+    }
+  },
+  "up": {
+    "labels": [
+      {
+        "description": "Metric name stored as the Prometheus `__name__` label.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/data_model.md"
+          }
+        ],
+        "name": "__name__",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector identifying the APISIX cluster.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:203",
+            "type": "repo_file"
+          }
+        ],
+        "name": "cluster",
+        "value_type": "string"
+      },
+      {
+        "description": "External label from the OpenTelemetry Collector indicating the deployment environment.",
+        "documentation": [
+          {
+            "path": "templates/config/otel-collector/config.yaml.j2:204",
+            "type": "repo_file"
+          }
+        ],
+        "name": "environment",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus instance label identifying the scraped endpoint (typically host:port).",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "instance",
+        "value_type": "string"
+      },
+      {
+        "description": "Prometheus job label identifying a group of scrape targets.",
+        "documentation": [
+          {
+            "type": "url",
+            "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+          }
+        ],
+        "name": "job",
+        "value_type": "string"
+      }
+    ],
+    "metric": {
+      "description": "1 if the scrape of the target succeeded, 0 otherwise.",
+      "documentation": [
+        {
+          "type": "url",
+          "url": "https://raw.githubusercontent.com/prometheus/docs/main/docs/concepts/jobs_instances.md"
+        }
+      ],
+      "name": "up",
+      "type": "gauge"
+    }
+  }
+}

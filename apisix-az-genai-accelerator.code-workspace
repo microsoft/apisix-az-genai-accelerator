@@ -1,0 +1,51 @@
+{
+  "folders": [
+    {
+      "path": "."
+    },
+    {
+      "path": "aoai-api-simulator"
+    },
+    {
+      "path": "apim-genai-gateway-toolkit"
+    },
+    {
+      "path": "gateway"
+    },
+    {
+      "path": "gateway_ops"
+    },
+    {
+      "path": "infra/terraform"
+    }
+  ],
+  "settings": {
+    "marktree.additionalIgnores": [
+      ".git",
+      ".gitignore",
+      ".vscode/",
+      ".idea/",
+      ".settings/",
+      ".vs/",
+      ".code-workspace",
+      "yarn.lock",
+      "pnpm-lock.yaml",
+      "package-lock.json",
+      ".editorconfig",
+      ".gitattributes",
+      ".mailmap",
+      "uv.lock",
+      "README.md",
+      "*.code-workspace",
+      ".dockerignore",
+      "docs/",
+      "apim-genai-gateway-toolkit/",
+      "aoai-api-simulator/",
+      "DEPLOYING.md",
+      "ROADMAP.md",
+      "AGENTS.md",
+      "grafana-dashboard/",
+      "config/"
+    ]
+  }
+}

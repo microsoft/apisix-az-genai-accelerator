@@ -1,0 +1,41 @@
+{#
+  Rate Limiting Plugin (Token Bucket Algorithm)
+  
+  Limits request rate per client using a token bucket algorithm.
+  Useful for preventing abuse and ensuring fair usage.
+  
+  Environment Variables:
+    - ENABLE_RATE_LIMIT: Set to "true" to enable rate limiting (default: false)
+    - RATE_LIMIT_RATE: Requests per second allowed (e.g., 10.0 = 10 req/s)
+                       Default: 0.0 (disabled)
+    - RATE_LIMIT_BURST: Burst size - extra requests allowed in short bursts (e.g., 20)
+                        Default: 0
+  
+  Key Strategy:
+    - Uses remote_addr (client IP) as the key
+    - Each IP gets its own rate limit bucket
+  
+  Response on Limit Exceeded:
+    - HTTP 429 (Too Many Requests)
+    - Error message: "Rate limit exceeded. Please retry after some time."
+  
+  Example:
+    ENABLE_RATE_LIMIT=true
+    RATE_LIMIT_RATE=10.0    # 10 requests per second
+    RATE_LIMIT_BURST=20     # Allow bursts up to 20 requests
+  
+  Customization:
+    - To rate limit by user/token, change key_type to "var" and key to a different variable
+    - To rate limit by header, change key to "http_X_Header_Name"
+  
+  See: https://apisix.apache.org/docs/apisix/plugins/limit-req/
+#}
+{% if enable_rate_limit | default(false) and rate_limit_rate | default(0.0) | float > 0 %}
+limit-req:
+  rate: {{ rate_limit_rate | float }}
+  burst: {{ rate_limit_burst | default(0) | int }}
+  key_type: var
+  key: remote_addr
+  rejected_code: 429
+  rejected_msg: "Rate limit exceeded. Please retry after some time."
+{% endif %}

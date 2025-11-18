@@ -1,0 +1,112 @@
+{#
+  Azure OpenAI Responses Routes
+
+  Provides dedicated routing for the Azure OpenAI Responses API covering
+  both legacy deployment-scoped URIs and the GA /openai/v1 surface. The
+  create route keeps streaming optimizations enabled for SSE, while the
+  management route handles retrieval, deletion, and cancellation of
+  background responses.
+
+  Supported URIs:
+    - POST /openai/deployments/*/responses
+    - POST /openai/v1/responses
+    - GET/DELETE /openai/deployments/*/responses/*
+    - GET/DELETE /openai/v1/responses/*
+    - POST /openai/deployments/*/responses/*/cancel
+    - POST /openai/v1/responses/*/cancel
+
+  See: https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/work-with-code
+#}
+
+# Azure OpenAI responses (create + streaming)
+- id: azure_openai_responses_create
+  uris:
+    - /openai/deployments/*/responses
+    - /openai/v1/responses
+  methods: [POST]
+  plugins:
+    # Request correlation
+    request-id:
+      algorithm: uuid
+      header_name: X-Request-ID
+      include_in_response: true
+    {# APIM gateway logging metadata #}
+    {% set apim_gateway_operation_name = "responses" %}
+    {% set apim_gateway_api_id = "openai-responses" %}
+    {% set apim_gateway_product_id = gateway_product_id | default('') %}
+
+{% filter indent(width=4, first=True, blank=True) %}
+{% include "plugins/apim-gateway-logger.yaml.j2" %}
+{% include "auth/azure-openai-auth.yaml.j2" %}
+{% include "auth/oidc-auth.yaml.j2" %}
+{% include "plugins/cors.yaml.j2" %}
+{% include "plugins/rate-limit.yaml.j2" %}
+{% include "plugins/quota-limit.yaml.j2" %}
+{% include "plugins/ai-rate-limit.yaml.j2" %}
+{% include "plugins/apim-priority-headers.yaml.j2" %}
+{% include "plugins/ip-restriction.yaml.j2" %}
+{% include "plugins/response-rewrite.yaml.j2" %}
+{% include "plugins/cache.yaml.j2" %}
+{% include "plugins/proxy-buffering.yaml.j2" %}
+{% include "plugins/proxy-control.yaml.j2" %}
+{% include "plugins/opentelemetry.yaml.j2" %}
+{% include "plugins/ai-proxy.yaml.j2" %}
+{% endfilter %}
+
+    prometheus:
+      prefer_name: true
+
+    file-logger:
+      path: "/usr/local/apisix/logs/genai_access.json"
+      include_req_body: false
+      include_resp_body: false
+
+  upstream:
+    nodes: { "127.0.0.1:1": 1 }
+    type: roundrobin
+
+# Azure OpenAI responses (retrieve/delete/cancel)
+- id: azure_openai_responses_manage
+  uris:
+    - /openai/deployments/*/responses/*
+    - /openai/deployments/*/responses/*/cancel
+    - /openai/v1/responses/*
+    - /openai/v1/responses/*/cancel
+  methods: [GET, DELETE, POST]
+  plugins:
+    request-id:
+      algorithm: uuid
+      header_name: X-Request-ID
+      include_in_response: true
+    {# APIM gateway logging metadata #}
+    {% set apim_gateway_operation_name = "responses_manage" %}
+    {% set apim_gateway_api_id = "openai-responses" %}
+    {% set apim_gateway_product_id = gateway_product_id | default('') %}
+
+{% filter indent(width=4, first=True, blank=True) %}
+{% include "plugins/apim-gateway-logger.yaml.j2" %}
+{% include "auth/azure-openai-auth.yaml.j2" %}
+{% include "auth/oidc-auth.yaml.j2" %}
+{% include "plugins/cors.yaml.j2" %}
+{% include "plugins/rate-limit.yaml.j2" %}
+{% include "plugins/quota-limit.yaml.j2" %}
+{% include "plugins/ai-rate-limit.yaml.j2" %}
+{% include "plugins/apim-priority-headers.yaml.j2" %}
+{% include "plugins/ip-restriction.yaml.j2" %}
+{% include "plugins/response-rewrite.yaml.j2" %}
+{% include "plugins/cache.yaml.j2" %}
+{% include "plugins/opentelemetry.yaml.j2" %}
+{% include "plugins/ai-proxy.yaml.j2" %}
+{% endfilter %}
+
+    prometheus:
+      prefer_name: true
+
+    file-logger:
+      path: "/usr/local/apisix/logs/genai_access.json"
+      include_req_body: false
+      include_resp_body: false
+
+  upstream:
+    nodes: { "127.0.0.1:1": 1 }
+    type: roundrobin

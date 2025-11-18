@@ -1,0 +1,22 @@
+[project]
+name = "gateway_config_api"
+version = "0.1.0"
+description = "APISIX configuration API for dynamic gateway adjustments"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi==0.121.2",
+    "uvicorn[standard]==0.38.0",
+    "pydantic==2.12.4",
+    "pydantic-settings==2.10.1",
+    "pyyaml==6.0.3",
+]
+
+[project.scripts]
+gateway-config-api = "gateway_config_api.app:main"
+
+[tool.uv]
+package = true
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

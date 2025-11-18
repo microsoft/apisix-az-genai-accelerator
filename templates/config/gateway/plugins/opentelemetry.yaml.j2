@@ -1,0 +1,33 @@
+{#
+  OpenTelemetry Plugin (per-route enablement)
+  
+  Enables distributed tracing on this route.
+  The global plugin_metadata (configured in observability/opentelemetry.yaml.j2)
+  defines the collector endpoint, service name, sampling rate, and other settings.
+  
+  This template enables the plugin on the route and configures the sampling strategy.
+  
+  Sampling Strategy:
+    - "always_on": Sample all requests (recommended for dev/testing)
+    - "always_off": Sample no requests
+    - "trace_id_ratio": Sample based on a fraction
+    - "parent_based": Respect parent span sampling decision
+  
+  For development/testing, we use "always_on" to capture all traces.
+  The global metadata's OTEL_SAMPLE_RATE provides additional control.
+  
+  Trace Data Captured:
+    - HTTP method, scheme, target, status_code, user_agent
+    - route_id, route_name
+    - net.host.name
+    - Custom headers (x-request-id, x-conversation-id, etc.) via additional_header_prefix_attributes
+  
+  See: https://apisix.apache.org/docs/apisix/plugins/opentelemetry/
+  See also: observability/opentelemetry.yaml.j2 for global plugin_metadata
+#}
+# OpenTelemetry distributed tracing
+# Global config (collector endpoint, service name, etc.) is in plugin_metadata
+# This enables the plugin on this route with always_on sampling
+opentelemetry:
+  sampler:
+    name: "always_on"  # Sample all requests for this route

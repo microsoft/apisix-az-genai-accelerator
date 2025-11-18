@@ -1,0 +1,56 @@
+{#
+  Proxy Cache Plugin
+  
+  Caches HTTP responses to improve performance and reduce backend load.
+  Useful for caching embeddings, model metadata, or other relatively static content.
+  
+  Environment Variables:
+    - ENABLE_CACHE: Set to "true" to enable response caching (default: false)
+    - CACHE_TTL: Cache time-to-live in seconds (e.g., 300 = 5 minutes)
+                 Default: 0 (no caching)
+  
+  Cache Strategy:
+    - Storage: memory + disk (disk_cache_one zone defined in config.yaml)
+    - Zone size: 50MB memory, 1GB disk
+    - Cache key: Automatically generated from request URI and args
+  
+  Cached Requests:
+    - Only GET requests are cached
+    - Only 200 OK responses are cached
+  
+  Cache Bypass:
+    - Add ?nocache=1 query parameter to skip cache
+  
+  Response Headers:
+    - Cache headers are hidden from clients
+  
+  Example:
+    ENABLE_CACHE=true
+    CACHE_TTL=300  # Cache for 5 minutes
+  
+  Use Cases:
+    - Embedding generation (same input = same output)
+    - Model metadata calls (/models endpoint)
+    - Other idempotent GET requests
+  
+  Warning:
+    Do NOT enable for chat completions with temperature > 0 or streaming!
+    Chat responses are typically non-deterministic and should not be cached.
+  
+  See: https://apisix.apache.org/docs/apisix/plugins/proxy-cache/
+#}
+{% if enable_cache | default(false) and cache_ttl | default(0) | int > 0 %}
+proxy-cache:
+  cache_strategy: memory
+  cache_zone: disk_cache_one
+  cache_ttl: {{ cache_ttl | int }}
+  cache_bypass:
+    - $arg_nocache
+  cache_method:
+    - GET
+  cache_http_status:
+    - 200
+  hide_cache_headers: true
+  no_cache:
+    - $arg_nocache
+{% endif %}

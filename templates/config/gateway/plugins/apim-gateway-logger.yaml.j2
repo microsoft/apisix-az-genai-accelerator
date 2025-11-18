@@ -1,0 +1,34 @@
+{# APIM-style gateway logger (Log Analytics via DCR/DCE)
+   Enables emitting APIM-like ApiManagementGatewayLogs records from APISIX.
+   Requires env:
+     - APIM_GATEWAY_LOGS_INGEST_URI
+     - APIM_GATEWAY_LOGS_STREAM (optional, default Custom-APISIXGatewayLogs)
+ #}
+{% if apim_gateway_logs_ingest_uri | default('') %}
+apim-gateway-logger:
+  dcr_ingest_uri: {{ apim_gateway_logs_ingest_uri | tojson }}
+  stream: {{ apim_gateway_logs_stream | default('Custom-APISIXGatewayLogs') | tojson }}
+  subscription_header: "ocp-apim-subscription-key"
+  api_id: {{ apim_gateway_api_id | default('apisix-genai') | tojson }}
+  operation_name: {{ apim_gateway_operation_name | default('unknown') | tojson }}
+  product_id: {{ apim_gateway_product_id | default('') | tojson }}
+  gateway_id: {{ apim_gateway_id | default('apisix-gateway') | tojson }}
+  {# Prefer explicit MSI client ID; fall back to the gateway identity client if available #}
+  {% set _msi_client_id = apim_gateway_logs_msi_client_id | default(azure_client_id) | default('') %}
+  {% set _msi_endpoint = apim_gateway_logs_msi_endpoint | default(msi_endpoint) | default(identity_endpoint) | default('') %}
+  {% set _msi_secret = apim_gateway_logs_msi_secret | default(identity_header) | default(msi_secret) | default('') %}
+  {% if _msi_client_id %}
+  msi_client_id: {{ _msi_client_id | tojson }}
+  {% endif %}
+  {% if _msi_endpoint %}
+  msi_endpoint: {{ _msi_endpoint | tojson }}
+  {% endif %}
+  {% if _msi_secret %}
+  msi_secret: {{ _msi_secret | tojson }}
+  {% endif %}
+  include_req_body: {{ apim_gateway_logs_include_req_body | default(false) }}
+  batch_max_size: {{ apim_gateway_logs_batch_max_size | default(100) }}
+  batch_flush_interval: {{ apim_gateway_logs_batch_flush_interval | default(5) }}
+  batch_max_retry: {{ apim_gateway_logs_batch_max_retry | default(5) }}
+  timeout_ms: {{ apim_gateway_logs_timeout_ms | default(10000) }}
+{% endif %}

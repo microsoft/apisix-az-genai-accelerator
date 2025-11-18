@@ -1,0 +1,7 @@
+version: v1.1.0
+steps:
+  - build: -t $Registry/{{.Values.image}} --platform {{.Values.platform}} --file {{.Values.dockerfile}} {{.Values.context}}
+    env:
+      - DOCKER_BUILDKIT=1
+  - push:
+      - "$Registry/{{.Values.image}}"

@@ -1,0 +1,62 @@
+# Terraform artifacts
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+tfplan
+*.tfplan
+backend.conf
+*.backend.conf
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+crash.log
+crash.*.log
+.terraformrc
+terraform.rc
+.state/
+errored.tfstate
+
+# Python build artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+.pytest_cache/
+
+# Lua build artifacts
+*.luac
+.luarocks/
+luacov.*
+
+# Deployment environment files
+.env.*
+!.env.example
+infra/terraform/stacks/**/*.tfvars
+infra/terraform/stacks/**/*.tfvars.json
+!infra/terraform/stacks/**/terraform.tfvars.example
+config/secrets.*.env
+!config/secrets.example.env
+
+# Azure Container Apps local output
+infra/aca/out/
+
+# Logs
+*.log
+logs/
+
+# Upstream E2E artifacts
+test-artifacts*/
+
+# Committed env templates
+!env/.env.e2e
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Python packaging metadata
+*.egg-info/

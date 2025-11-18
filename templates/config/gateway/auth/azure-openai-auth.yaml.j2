@@ -1,0 +1,33 @@
+{#
+  Azure OpenAI Authentication Plugin
+  
+  Custom authentication plugin that supports both Azure OpenAI authentication methods:
+    1. api-key header (Azure OpenAI native)
+    2. Authorization: Bearer <token> header (OpenAI-compatible)
+  
+  Environment Variables:
+    - GATEWAY_REQUIRE_AUTH: Set to "true" to enable authentication (default: false)
+  
+  Plugin Location:
+    gateway/lua/apisix/plugins/azure-openai-auth.lua
+  
+  Behavior:
+    - Validates api-key or Authorization header against configured consumers
+    - Hides credentials from upstream (upstream never sees auth headers)
+    - Returns 401 Unauthorized if authentication fails
+  
+  Consumer Configuration:
+    Consumers are defined separately (see templates/auth/key-auth-consumers.yaml.j2)
+    or can be configured as a default single consumer.
+  
+  Example:
+    GATEWAY_REQUIRE_AUTH=true
+    GATEWAY_CLIENT_NAME_0="webapp"
+    GATEWAY_CLIENT_KEY_0="secret-key-123"
+  
+  See also: templates/auth/key-auth-consumers.yaml.j2
+#}
+{% if gateway_require_auth | default(false) %}
+azure-openai-auth:
+  hide_credentials: true
+{% endif %}

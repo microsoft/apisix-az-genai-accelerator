@@ -1,0 +1,62 @@
+{#
+  Azure AD OpenID Connect (OIDC) Authentication
+  
+  Validates JWT tokens issued by Azure Active Directory (Azure AD) and passes
+  user claims to upstream services as HTTP headers.
+  
+  Environment Variables:
+    - ENABLE_OIDC: Set to "true" to enable OIDC authentication (default: false)
+    - OIDC_CLIENT_ID: Azure AD application client ID (required if OIDC enabled)
+    - OIDC_CLIENT_SECRET: Azure AD application client secret (required if OIDC enabled)
+    - OIDC_DISCOVERY_URL: OIDC discovery endpoint URL
+                          Format: https://login.microsoftonline.com/{tenant-id}/v2.0/.well-known/openid-configuration
+    - OIDC_REDIRECT_URI: OAuth2 redirect URI (typically your gateway URL + /callback)
+  
+  Azure AD Setup:
+    1. Register application in Azure AD
+    2. Create client secret
+    3. Configure redirect URI
+    4. Note tenant ID and client ID
+  
+  Authentication Flow:
+    - Bearer-only mode: Validates JWT tokens in Authorization header
+    - No redirect: API clients must obtain tokens from Azure AD first
+    - Introspection: Validates token with Azure AD introspection endpoint
+  
+  Claims Passed to Upstream:
+    - X-Principal-Id: Azure AD object ID (oid claim)
+    - X-Tenant-Id: Azure AD tenant ID (tid claim)
+    - X-User-Email: User email address (email claim)
+    - X-User-Name: User display name (name claim)
+  
+  Example:
+    ENABLE_OIDC=true
+    OIDC_CLIENT_ID="12345678-1234-1234-1234-123456789abc"
+    OIDC_CLIENT_SECRET="your-client-secret"
+    OIDC_DISCOVERY_URL="https://login.microsoftonline.com/your-tenant-id/v2.0/.well-known/openid-configuration"
+    OIDC_REDIRECT_URI="https://gateway.example.com/callback"
+  
+  See: https://apisix.apache.org/docs/apisix/plugins/openid-connect/
+#}
+{% if enable_oidc | default(false) %}
+{% if oidc_client_id | default('') and oidc_client_secret | default('') and oidc_discovery_url | default('') and oidc_redirect_uri | default('') %}
+openid-connect:
+  client_id: {{ oidc_client_id | tojson }}
+  client_secret: {{ oidc_client_secret | tojson }}
+  discovery: {{ oidc_discovery_url | tojson }}
+  scope: "openid profile email"
+  bearer_only: true
+  realm: "apisix"
+  introspection_endpoint_auth_method: "client_secret_post"
+  redirect_uri: {{ oidc_redirect_uri | tojson }}
+
+# Pass Azure AD claims to upstream as headers
+proxy-rewrite:
+  headers:
+    set:
+      X-Principal-Id: $jwt_claim_oid
+      X-Tenant-Id: $jwt_claim_tid
+      X-User-Email: $jwt_claim_email
+      X-User-Name: $jwt_claim_name
+{% endif %}
+{% endif %}

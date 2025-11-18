@@ -1,0 +1,75 @@
+{#
+  AI Proxy Multi-Backend Configuration
+  
+  Configures the ai-proxy-multi plugin for multi-backend routing with automatic
+  failover, health checks, and load balancing.
+  
+  Environment Variables:
+    Backend Configuration (indexed, starting from 0):
+      - AZURE_OPENAI_ENDPOINT_N: Backend endpoint URL (required)
+      - AZURE_OPENAI_KEY_N: Backend API key env var name (required)
+      - AZURE_OPENAI_PRIORITY_N: Priority level (default: 5, lower = higher priority)
+      - AZURE_OPENAI_WEIGHT_N: Weight for load balancing (default: 1)
+    
+    Load Balancing:
+      - LB_ALG: Algorithm (roundrobin | chash)
+        - roundrobin: Distribute evenly across backends
+        - chash: Consistent hashing on X-Conversation-ID header
+        Default: roundrobin
+  
+  Backends are loaded via Python code in gateway/core/loader.py
+  
+  Features:
+    - Automatic failover on rate limits (429) and server errors (5xx)
+    - Active health checks every 10s (healthy) or 5s (unhealthy)
+    - Request/response logging with summaries
+    - Timeout: 60s connect, 300s send/read for long-running LLM requests
+  
+  See: https://apisix.apache.org/docs/apisix/plugins/ai-proxy-multi/
+#}
+ai-proxy-multi:
+  instances:
+{% for b in azure_openai_groups %}
+    - provider: dynamic-azure-openai
+      name: {{ (b.NAME | default("backend" ~ loop.index0)) | tojson }}
+      priority: {{ (b.PRIORITY | default(5)) | int }}
+      weight: {{ (b.WEIGHT | default(1)) | int }}
+{% if b.KEY is defined %}
+      auth:
+        header:
+          api-key: "{{ b.KEY }}"
+{% endif %}
+      override:
+        endpoint: "{{ b.ENDPOINT }}"
+      timeout: { connect: 60, send: 300, read: 300 }
+{% endfor %}
+  balancer:
+    algorithm: {{ lb_alg | default('roundrobin') | tojson }}   # roundrobin | chash
+{% if (lb_alg | default('roundrobin')) == "chash" %}
+    hash_on: header
+    key: X-Conversation-ID
+{% endif %}
+  # Fallback on both rate limiting (429) and server errors (5xx)
+  # This allows the plugin to try alternate instances on any failure
+  fallback_strategy: ["http_429", "http_5xx"]
+  logging:
+    summaries: true
+{% if apisix_active_health_checks | default(false) %}
+  checks:
+    active:
+      type: {{ apisix_active_health_check_scheme | default('http') }}
+      timeout: {{ apisix_active_health_check_timeout | default(1) }}
+      http_path: {{ apisix_active_health_check_path | default('/openai/v1/models') }}
+{% if (apisix_active_health_check_scheme | default('http')) == 'https' %}
+      https_verify_certificate: {{ apisix_active_health_check_verify_cert | default(true) | tojson }}
+{% endif %}
+      healthy:
+        interval: {{ apisix_active_health_check_healthy_interval | default(10) }}
+        http_statuses: [200]
+        successes: 1
+      unhealthy:
+        interval: {{ apisix_active_health_check_unhealthy_interval | default(5) }}
+        http_statuses: [401,403,429,500,502,503,504]
+        http_failures: 1
+        timeout: 1
+{% endif %}

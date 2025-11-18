@@ -1,0 +1,44 @@
+{#
+  Response Rewrite Plugin
+  
+  Modifies HTTP response headers for security and privacy.
+  Removes server identification headers and adds security headers.
+  
+  Environment Variables:
+    - ENABLE_RESPONSE_REWRITE: Set to "true" to enable (default: false)
+  
+  Headers Removed:
+    - X-Powered-By: Prevents server technology disclosure
+    - Server: Hides nginx/APISIX version information
+  
+  Security Headers Added:
+    - X-Content-Type-Options: nosniff
+      Prevents MIME type sniffing attacks
+    - X-Frame-Options: DENY
+      Prevents clickjacking by disallowing page embedding in frames
+    - X-XSS-Protection: 1; mode=block
+      Enables browser XSS filtering and blocks page on detection
+  
+  Example:
+    ENABLE_RESPONSE_REWRITE=true
+  
+  Customization:
+    Add additional security headers by editing this template:
+    - Content-Security-Policy: Control resource loading
+    - Strict-Transport-Security: Force HTTPS
+    - Referrer-Policy: Control referrer information
+    - Permissions-Policy: Control browser features
+  
+  See: https://apisix.apache.org/docs/apisix/plugins/response-rewrite/
+#}
+{% if enable_response_rewrite | default(false) %}
+response-rewrite:
+  headers:
+    remove:
+      - X-Powered-By
+      - Server
+    set:
+      X-Content-Type-Options: "nosniff"
+      X-Frame-Options: "DENY"
+      X-XSS-Protection: "1; mode=block"
+{% endif %}

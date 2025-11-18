@@ -1,0 +1,72 @@
+# -----------------------------------------------------------------------------
+# Example tfvars for the 20-workload stack.
+#
+# Copy to <environment>.tfvars (e.g., dev.tfvars) and adjust before running:
+#   terraform -chdir=infra/terraform/stacks/20-workload apply \
+#     -var-file=<environment>.tfvars
+# -----------------------------------------------------------------------------
+
+# Subscription / tenant IDs (same as previous stacks)
+subscription_id = "00000000-0000-0000-0000-000000000000"
+tenant_id        = "11111111-1111-1111-1111-111111111111"
+
+# Naming inputs
+environment_code = "dev"
+location         = "eastus"
+workload_name    = "apisix"
+identifier       = ""
+
+# Outputs from foundation stack
+platform_resource_group_name = "rg-platform-apisix-dev-eastus"
+platform_acr_name            = "acrplatformapisixdeveastus"
+key_vault_name               = "kv-apisix-dev-eastus"
+aca_managed_identity_id      = "/subscriptions/.../resourceGroups/.../providers/Microsoft.ManagedIdentity/userAssignedIdentities/aca-kv"
+
+# Remote state blob locations (from bootstrap)
+state_resource_group_name  = "rg-terraform-state"
+state_storage_account_name = "stterraformstate123"
+state_container_name       = "tfstate"
+foundation_state_blob_key  = "dev/10-platform.tfstate"
+openai_state_blob_key      = "dev/15-openai.tfstate"
+
+# Non-secret application settings injected into the gateway
+app_settings = {
+  APISIX_LOG_LEVEL     = "info"
+  GATEWAY_REQUIRE_AUTH = "true"
+}
+
+# Key Vault secret names (should align with secrets populated by sync-env.sh)
+secret_names = [
+  "gateway-client-key-0",
+  "azure-openai-primary-key-0"
+]
+
+# Additional env vars that are safe to inline (rare; prefer Key Vault)
+direct_environment_variables = {}
+
+# Container images published to the platform ACR
+gateway_image = "acrplatformapisixdeveastus.azurecr.io/apisix-az-genai-accelerator/gateway:latest"
+hydrenv_image = "acrplatformapisixdeveastus.azurecr.io/apisix-az-genai-accelerator/hydrenv:latest"
+
+# Gateway resource sizing / ingress
+expose_gateway_public = true
+gateway_target_port   = 9080
+gateway_cpu           = 1.0
+gateway_memory        = "2Gi"
+gateway_min_replicas  = 1
+gateway_max_replicas  = 3
+
+# Observability
+log_analytics_workspace_id = ""
+log_retention_days          = 30
+app_insights_connection_string = "InstrumentationKey=...;IngestionEndpoint=https://..."
+
+# Alerts (optional)
+enable_alerts          = false
+alert_action_group_id  = ""
+
+tags = {
+  owner       = "platform-team"
+  environment = "dev"
+  workload    = "apisix"
+}

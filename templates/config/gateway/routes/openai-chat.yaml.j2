@@ -1,0 +1,91 @@
+{#
+  Azure OpenAI Chat Completions Route
+  
+  Main route for Azure OpenAI chat completions with multi-backend routing,
+  authentication, rate limiting, and observability.
+  
+  Supported URIs:
+    - /openai/deployments/*/chat/completions (Legacy Azure style)
+    - /openai/v1/chat/completions (New Azure v1 style)
+  
+  Environment Variables:
+    Backend Configuration (indexed, e.g., _0, _1, _2...):
+      - AZURE_OPENAI_ENDPOINT_N: Backend endpoint URL (required)
+      - AZURE_OPENAI_KEY_N: Backend API key (required)
+      - AZURE_OPENAI_PRIORITY_N: Backend priority (default: 5)
+      - AZURE_OPENAI_WEIGHT_N: Backend weight (default: 1)
+    
+    Load Balancing:
+      - LB_ALG: Load balancing algorithm (roundrobin | chash)
+                Default: roundrobin
+    
+    Authentication (see templates/auth/ for details):
+      - GATEWAY_REQUIRE_AUTH: Enable authentication (true/false)
+      - ENABLE_OIDC: Enable Azure AD OIDC (true/false)
+    
+    Plugins (see templates/plugins/ for details):
+      - ENABLE_CORS: Enable CORS (true/false)
+      - ENABLE_RATE_LIMIT: Enable rate limiting (true/false)
+      - ENABLE_QUOTA: Enable quota limiting (true/false)
+      - ENABLE_IP_RESTRICTION: Enable IP filtering (true/false)
+      - ENABLE_RESPONSE_REWRITE: Enable security headers (true/false)
+      - ENABLE_CACHE: Enable response caching (true/false)
+  
+  See: https://apisix.apache.org/docs/apisix/plugins/ai-proxy-multi/
+#}
+
+# Azure OpenAI chat completions (Azure-only: legacy + v1)
+- id: azure_openai_chat
+  uris:
+    - /openai/deployments/*/chat/completions  # Legacy Azure style
+    - /openai/v1/chat/completions             # New Azure v1 style
+    - /retry-with-payg/openai/deployments/*/chat/completions
+    - /retry-with-payg-v2/openai/deployments/*/chat/completions
+  methods: [POST]
+  plugins:
+    # Request correlation
+    request-id:
+      algorithm: uuid
+      header_name: X-Request-ID
+      include_in_response: true
+    {# APIM gateway logging metadata #}
+    {% set apim_gateway_operation_name = "chat_completions" %}
+    {% set apim_gateway_api_id = "openai-chat" %}
+    {% set apim_gateway_product_id = gateway_product_id | default('') %}
+
+{% filter indent(width=4, first=True, blank=True) %}
+{% include "plugins/apim-gateway-logger.yaml.j2" %}
+{% include "auth/azure-openai-auth.yaml.j2" %}
+{% include "auth/oidc-auth.yaml.j2" %}
+{% include "plugins/cors.yaml.j2" %}
+{% include "plugins/rate-limit.yaml.j2" %}
+{% include "plugins/quota-limit.yaml.j2" %}
+{% include "plugins/ai-rate-limit.yaml.j2" %}
+{% include "plugins/apim-priority-headers.yaml.j2" %}
+{% include "plugins/ip-restriction.yaml.j2" %}
+{% include "plugins/response-rewrite.yaml.j2" %}
+{% include "plugins/cache.yaml.j2" %}
+{% include "plugins/proxy-buffering.yaml.j2" %}
+{% include "plugins/proxy-control.yaml.j2" %}
+{% include "plugins/opentelemetry.yaml.j2" %}
+proxy-rewrite:
+  regex_uri:
+    - "^/(?:retry-with-payg|retry-with-payg-v2)(/openai/.*)$"
+    - "$1"
+{% include "plugins/ai-proxy.yaml.j2" %}
+{% endfilter %}
+
+    # Prometheus metrics with rich labels (route, consumer, status, etc.)
+    # See: https://apisix.apache.org/docs/apisix/plugins/prometheus/
+    prometheus:
+      prefer_name: true  # Use route/consumer names instead of IDs in labels
+
+    # Structured JSON logging for LLM analytics
+    file-logger:
+      path: "/usr/local/apisix/logs/genai_access.json"
+      include_req_body: false
+      include_resp_body: false
+
+  upstream:
+    nodes: { "127.0.0.1:1": 1 }
+    type: roundrobin

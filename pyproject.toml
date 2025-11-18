@@ -1,0 +1,52 @@
+[project]
+name = "apisix-az-genai-accelerator"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = []
+
+[project.scripts]
+build-and-push-aoai-api-simulator = "gateway_ops.build_and_push_aoai_api_simulator:main"
+build-and-push-gateway-config-api = "gateway_ops.build_and_push_gateway_config_api:main"
+build-and-push-gateway = "gateway_ops.build_and_push_gateway:main"
+build-and-push-hydrenv = "gateway_ops.build_and_push_hydrenv:main"
+deploy-bootstrap = "gateway_ops.deploy_bootstrap:main"
+deploy-openai = "gateway_ops.deploy_openai:main"
+deploy-platform = "gateway_ops.deploy_platform:main"
+deploy-workload = "gateway_ops.deploy_workload:main"
+sync-env = "gateway_ops.sync_env:main"
+run-e2e-latency-routing = "gateway_ops.run_e2e_latency_routing:main"
+run-e2e-manage-spikes-with-payg-v2 = "gateway_ops.run_e2e_manage_spikes_with_payg_v2:main"
+run-e2e-manage-spikes-with-payg = "gateway_ops.run_e2e_manage_spikes_with_payg:main"
+run-e2e-prioritization = "gateway_ops.run_e2e_prioritization:main"
+run-e2e-round-robin-simple-v2 = "gateway_ops.run_e2e_round_robin_simple_v2:main"
+run-e2e-round-robin-simple = "gateway_ops.run_e2e_round_robin_simple:main"
+run-e2e-round-robin-weighted-v2 = "gateway_ops.run_e2e_round_robin_weighted_v2:main"
+run-e2e-round-robin-weighted = "gateway_ops.run_e2e_round_robin_weighted:main"
+run-e2e-tests = "gateway_ops.run_e2e_tests:main"
+run-e2e-usage-tracking = "gateway_ops.run_e2e_usage_tracking:main"
+
+[dependency-groups]
+dev = []
+e2e-tests = [
+    "asciichartpy==1.5.25",
+    "azure-identity==1.16.1",
+    "azure-monitor-opentelemetry==1.3.0",
+    "azure-monitor-query==1.3.0",
+    "locust==2.26.0",
+    "openai==2.6.1",
+    "tabulate==0.9.0",
+    "certifi==2025.10.5",
+]
+
+[tool.uv.workspace]
+members = ["hydrenv", "gateway_ops", "gateway_config_api"]
+
+[tool.uv]
+package = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["gateway_ops/gateway_ops"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

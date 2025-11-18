@@ -1,0 +1,46 @@
+{#
+  IP Restriction Plugin
+  
+  Controls access based on client IP addresses using whitelist and/or blacklist.
+  Useful for restricting access to known corporate networks or blocking malicious IPs.
+  
+  Environment Variables:
+    - ENABLE_IP_RESTRICTION: Set to "true" to enable IP filtering (default: false)
+    - IP_WHITELIST: Comma-separated IPs or CIDR blocks to allow
+                    Example: "192.168.1.0/24,10.0.0.1"
+                    Default: "" (empty = no whitelist)
+    - IP_BLACKLIST: Comma-separated IPs or CIDR blocks to deny
+                    Example: "203.0.113.0/24,198.51.100.5"
+                    Default: "" (empty = no blacklist)
+  
+  Behavior:
+    - If whitelist is set: Only IPs in whitelist are allowed
+    - If blacklist is set: IPs in blacklist are denied, others allowed
+    - If both set: Whitelist takes precedence (only whitelisted IPs allowed)
+  
+  Response on Restriction:
+    - HTTP 403 (Forbidden)
+  
+  Examples:
+    # Allow only corporate network:
+    ENABLE_IP_RESTRICTION=true
+    IP_WHITELIST="10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+    
+    # Block specific malicious IPs:
+    ENABLE_IP_RESTRICTION=true
+    IP_BLACKLIST="198.51.100.5,203.0.113.42"
+  
+  Parsed Lists:
+    The IP lists are parsed in gateway/core/config.py into arrays for YAML.
+  
+  See: https://apisix.apache.org/docs/apisix/plugins/ip-restriction/
+#}
+{% if enable_ip_restriction | default(false) %}
+ip-restriction:
+{% if ip_whitelist_parsed | default([]) %}
+  whitelist: {{ ip_whitelist_parsed }}
+{% endif %}
+{% if ip_blacklist_parsed | default([]) %}
+  blacklist: {{ ip_blacklist_parsed }}
+{% endif %}
+{% endif %}

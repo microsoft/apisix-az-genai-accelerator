@@ -1,0 +1,6 @@
+[submodule "apim-genai-gateway-toolkit"]
+	path = apim-genai-gateway-toolkit
+	url = https://github.com/Falven/apim-genai-gateway-toolkit.git
+[submodule "aoai-api-simulator"]
+	path = aoai-api-simulator
+	url = https://github.com/Falven/aoai-api-simulator.git

@@ -1,0 +1,83 @@
+{#
+  Azure OpenAI Completions Route
+
+  Dedicated route for Azure OpenAI text completions. Mirrors the authentication,
+  policy, and observability stack used by chat completions.
+
+  Supported URIs:
+    - /openai/deployments/*/completions        (legacy Azure style)
+    - /openai/v1/completions                   (new Azure v1 style)
+
+  E2E scenario prefixes (APIM toolkit):
+    - /round-robin-simple/openai/deployments/*/completions
+    - /round-robin-weighted/openai/deployments/*/completions
+    - /round-robin-simple-v2/openai/deployments/*/completions
+    - /round-robin-weighted-v2/openai/deployments/*/completions
+    - /usage-tracking/openai/deployments/*/completions
+
+  Environment Variables (indexed, e.g., _0, _1, _2...):
+    - AZURE_OPENAI_ENDPOINT_N (required)
+    - AZURE_OPENAI_KEY_N (required)
+    - AZURE_OPENAI_PRIORITY_N (default: 5)
+    - AZURE_OPENAI_WEIGHT_N (default: 1)
+
+  See: https://apisix.apache.org/docs/apisix/plugins/ai-proxy-multi/
+#}
+
+# Azure OpenAI completions (legacy + v1) + scenario-prefixed aliases
+- id: azure_openai_completions
+  uris:
+    - /openai/deployments/*/completions
+    - /openai/v1/completions
+    - /round-robin-simple/openai/deployments/*/completions
+    - /round-robin-weighted/openai/deployments/*/completions
+    - /round-robin-simple-v2/openai/deployments/*/completions
+    - /round-robin-weighted-v2/openai/deployments/*/completions
+    - /usage-tracking/openai/deployments/*/completions
+  methods: [POST]
+  plugins:
+    # Request correlation
+    request-id:
+      algorithm: uuid
+      header_name: X-Request-ID
+      include_in_response: true
+    {# APIM gateway logging metadata #}
+    {% set apim_gateway_operation_name = "completions" %}
+    {% set apim_gateway_api_id = "openai-completions" %}
+    {% set apim_gateway_product_id = gateway_product_id | default('') %}
+
+{% filter indent(width=4, first=True, blank=True) %}
+{% include "plugins/apim-gateway-logger.yaml.j2" %}
+{% include "auth/azure-openai-auth.yaml.j2" %}
+{% include "auth/oidc-auth.yaml.j2" %}
+{% include "plugins/cors.yaml.j2" %}
+{% include "plugins/rate-limit.yaml.j2" %}
+{% include "plugins/quota-limit.yaml.j2" %}
+{% include "plugins/ai-rate-limit.yaml.j2" %}
+{% include "plugins/apim-priority-headers.yaml.j2" %}
+{% include "plugins/ip-restriction.yaml.j2" %}
+{% include "plugins/response-rewrite.yaml.j2" %}
+{% include "plugins/cache.yaml.j2" %}
+{% include "plugins/proxy-buffering.yaml.j2" %}
+{% include "plugins/proxy-control.yaml.j2" %}
+{% include "plugins/opentelemetry.yaml.j2" %}
+proxy-rewrite:
+  regex_uri:
+    - "^/(?:round-robin-simple|round-robin-weighted|round-robin-simple-v2|round-robin-weighted-v2|usage-tracking)(/openai/.*)$"
+    - "$1"
+{% include "plugins/ai-proxy.yaml.j2" %}
+{% endfilter %}
+
+    # Prometheus metrics with rich labels (route, consumer, status, etc.)
+    prometheus:
+      prefer_name: true
+
+    # Structured JSON logging for GenAI analytics (non-streaming)
+    file-logger:
+      path: "/usr/local/apisix/logs/genai_access.json"
+      include_req_body: false
+      include_resp_body: false
+
+  upstream:
+    nodes: { "127.0.0.1:1": 1 }
+    type: roundrobin

@@ -1,0 +1,289 @@
+{#
+  OpenTelemetry Collector Configuration Template
+  
+  This template generates the OTel Collector config.yaml file for Azure-native observability.
+  Configuration is driven by environment variables:
+  
+  - Azure exporters: APPLICATIONINSIGHTS_CONNECTION_STRING (required for traces/logs)
+                     AZURE_MONITOR_WORKSPACE_ENDPOINT (required for metrics)
+  
+  Environment Variables:
+    - OTEL_SERVICE_NAME: Service name for telemetry (default: apisix-gateway)
+    - SERVICE_VERSION: Service version (default: unknown)
+    - ENVIRONMENT: Deployment environment (default: dev)
+    - OTEL_MEMORY_LIMIT_MIB: Memory limit in MiB (default: 512)
+    - OTEL_MEMORY_SPIKE_MIB: Spike limit in MiB (default: 128)
+    - OTEL_BATCH_TIMEOUT: Batch timeout (default: 10s)
+    - OTEL_BATCH_SIZE: Batch size (default: 1024)
+    - APISIX_LOGS_PATH: APISIX JSON logs path (default: /usr/local/apisix/logs/genai_access.json)
+    - APISIX_GATEWAY_ENDPOINT: Host:port for scraping Prometheus metrics (default: 127.0.0.1:9091)
+    - APISIX_METRICS_PATH: Prometheus metrics path (default: /apisix/prometheus/metrics)
+    - PROMETHEUS_SCRAPE_INTERVAL: Prometheus scrape interval (default: 30s)
+    - PROMETHEUS_SCRAPE_TIMEOUT: Prometheus scrape timeout (default: 10s)
+    - APPLICATIONINSIGHTS_CONNECTION_STRING: App Insights connection string (required)
+    - AZURE_MONITOR_WORKSPACE_ENDPOINT: Managed Prometheus endpoint (required)
+    - CLUSTER_NAME: Cluster identifier
+    - CLOUD_PLATFORM: Cloud platform (default: azure_container_apps)
+    - OTEL_LOG_LEVEL: Log level (default: info)
+    - ENABLE_DEBUG_EXPORTER: Enable debug exporter (default: false)
+  
+  See: https://opentelemetry.io/docs/collector/configuration/
+#}
+# ─────────────────────────────────────────────────────────────────────────────
+# OpenTelemetry Collector Configuration
+# Generated from template - DO NOT EDIT DIRECTLY
+# ─────────────────────────────────────────────────────────────────────────────
+
+{% set has_appins = applicationinsights_connection_string is defined and applicationinsights_connection_string %}
+{% set has_azure_metrics = azure_monitor_workspace_endpoint is defined and azure_monitor_workspace_endpoint %}
+{% set debug_exporter_enabled = enable_debug_exporter | default(false) %}
+{% set metrics_pipeline_enabled = has_azure_metrics or debug_exporter_enabled %}
+
+receivers:
+  # Receive OTLP traces and metrics from APISIX
+  # Using standard OTLP ports
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+{% if metrics_pipeline_enabled %}
+  # Scrape APISIX Prometheus metrics exposed on the gateway container
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: apisix-gateway
+          scrape_interval: {{ prometheus_scrape_interval | default('30s') | tojson }}
+          scrape_timeout: {{ prometheus_scrape_timeout | default('10s') | tojson }}
+          metrics_path: {{ apisix_metrics_path | default('/apisix/prometheus/metrics') | tojson }}
+          static_configs:
+            - targets: [{{ apisix_gateway_endpoint | default('127.0.0.1:9091') | tojson }}]
+{% endif %}
+
+{% if has_appins %}
+  # File log receiver for structured JSON logs from APISIX
+  # Requires shared volume mount of APISIX logs directory
+  filelog:
+    include:
+      - {{ apisix_logs_path | default('/usr/local/apisix/logs/genai_access.json') }}
+    start_at: beginning
+    operators:
+      - type: json_parser
+        parse_from: body
+{% endif %}
+
+processors:
+  # Batch telemetry for efficiency
+  batch:
+    timeout: {{ otel_batch_timeout | default('10s') }}
+    send_batch_size: {{ otel_batch_size | default(1024) }}
+
+  # Add resource attributes
+  resource:
+    attributes:
+      - key: service.name
+        value: {{ otel_service_name | default('apisix-gateway') }}
+        action: upsert
+      - key: service.version
+        value: {{ service_version | default('unknown') }}
+        action: upsert
+      - key: deployment.environment
+        value: {{ environment | default('dev') }}
+        action: upsert
+{% if has_appins %}
+      - key: cloud.provider
+        value: azure
+        action: upsert
+      - key: cloud.platform
+        value: {{ cloud_platform | default('azure_container_apps') }}
+        action: upsert
+{% endif %}
+
+  # Memory limiter to prevent OOM
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: {{ otel_memory_limit_mib | default(512) }}
+    spike_limit_mib: {{ otel_memory_spike_mib | default(128) }}
+
+{% if has_appins %}
+  # Metrics transform processor for cost calculation
+  # Transform token counts into cost estimates based on model pricing
+  metricstransform:
+    transforms:
+      # GPT-5-mini pricing: $0.100/$0.600 per 1M tokens (prompt/completion)
+      - include: apisix_llm_prompt_tokens
+        experimental_match_labels:
+          llm_model: gpt-5-mini
+        action: update
+        new_name: llm_cost_usd
+        operations:
+          - action: aggregate_labels
+            label_set: [ llm_model ]
+            aggregation_type: sum
+          - action: experimental_scale_value
+            experimental_scale: 0.00000010  # $0.100 / 1M
+          - action: add_label
+            new_label: cost_component
+            new_value: prompt
+      
+      - include: apisix_llm_completion_tokens
+        experimental_match_labels:
+          llm_model: gpt-5-mini
+        action: update
+        new_name: llm_cost_usd
+        operations:
+          - action: aggregate_labels
+            label_set: [ llm_model ]
+            aggregation_type: sum
+          - action: experimental_scale_value
+            experimental_scale: 0.00000060  # $0.600 / 1M
+          - action: add_label
+            new_label: cost_component
+            new_value: completion
+
+      # text-embedding-3-small pricing: $0.02 per 1M tokens (input only)
+      - include: apisix_llm_prompt_tokens
+        experimental_match_labels:
+          llm_model: text-embedding-3-small
+          request_type: ai_embeddings
+        action: update
+        new_name: llm_cost_usd
+        operations:
+          - action: aggregate_labels
+            label_set: [ llm_model ]
+            aggregation_type: sum
+          - action: experimental_scale_value
+            experimental_scale: 0.00000002  # $0.020 / 1M
+          - action: add_label
+            new_label: cost_component
+            new_value: embedding_input
+
+{% endif %}
+
+{% if has_appins and has_azure_metrics %}
+connectors:
+  # Span metrics connector to generate RED metrics from traces
+  spanmetrics:
+    dimensions:
+      - name: http.method
+      - name: http.status_code
+      - name: route_id
+      - name: llm_model
+{% endif %}
+
+exporters:
+{% if has_appins %}
+  # Azure Monitor / Application Insights exporter for traces and logs
+  azuremonitor:
+    connection_string: {{ applicationinsights_connection_string | tojson }}
+{% endif %}
+
+{% if has_azure_metrics %}
+  # Azure Monitor Managed Prometheus for metrics
+  prometheusremotewrite/azure:
+    endpoint: {{ azure_monitor_workspace_endpoint }}/api/v1/write?api-version=2023-04-24
+    auth:
+      authenticator: azureauth
+    headers:
+      X-Scope-OrgID: {{ prometheus_remote_write_org_id | default('anonymous') | tojson }}
+    external_labels:
+      cluster: {{ cluster_name | default('apisix-gateway') | tojson }}
+      environment: {{ environment | default('dev') | tojson }}
+    remote_write_queue:
+      enabled: {{ prometheus_remote_write_queue_enabled | default(true) | tojson }}
+      queue_size: {{ prometheus_remote_write_queue_size | default(10000) }}
+      num_consumers: {{ prometheus_remote_write_queue_consumers | default(5) }}
+    retry_on_failure:
+      enabled: {{ prometheus_remote_write_retry_enabled | default(true) | tojson }}
+      initial_interval: {{ prometheus_remote_write_retry_initial | default('5s') }}
+      max_interval: {{ prometheus_remote_write_retry_max | default('30s') }}
+      max_elapsed_time: {{ prometheus_remote_write_retry_max_elapsed | default('5m') }}
+    timeout: {{ prometheus_remote_write_timeout | default('30s') }}
+{% endif %}
+
+{% if debug_exporter_enabled %}
+  # Debug exporter for troubleshooting
+  debug:
+    verbosity: detailed
+    sampling_initial: 5
+    sampling_thereafter: 200
+{% endif %}
+
+extensions:
+  # Health check endpoint
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+  # Performance profiler (optional)
+  pprof:
+    endpoint: 0.0.0.0:1777
+
+{% if has_azure_metrics %}
+  # Azure AD authentication for Azure Monitor
+  azureauth:
+    {% if azure_client_id | default('') %}
+    managed_identity:
+      client_id: {{ azure_client_id | tojson }}
+    {% else %}
+    use_default: true
+    {% endif %}
+    scopes:
+      - "https://monitor.azure.com/.default"
+{% endif %}
+
+service:
+  extensions:
+    - health_check
+    - pprof
+{% if has_azure_metrics %}
+    - azureauth
+{% endif %}
+
+  pipelines:
+    # ─────────────────────────────────────────────────────────────────────────
+    # Traces Pipeline → Azure Application Insights
+    # ─────────────────────────────────────────────────────────────────────────
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [{% if has_appins %}azuremonitor{% if has_azure_metrics %}, spanmetrics{% endif %}{% endif %}{% if debug_exporter_enabled %}{% if has_appins %}{% if has_azure_metrics %}, {% else %}, {% endif %}{% endif %}debug{% endif %}]
+
+{% if has_appins %}
+    # ─────────────────────────────────────────────────────────────────────────
+    # Logs Pipeline → Azure Application Insights
+    # ─────────────────────────────────────────────────────────────────────────
+    logs:
+      receivers: [otlp, filelog]
+      processors: [memory_limiter, resource, batch]
+      exporters: [azuremonitor{% if debug_exporter_enabled %}, debug{% endif %}]
+{% endif %}
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Metrics Pipeline → Azure Monitor Managed Prometheus
+    # ─────────────────────────────────────────────────────────────────────────
+{% if metrics_pipeline_enabled %}
+    metrics:
+      receivers: [otlp, prometheus{% if has_appins and has_azure_metrics %}, spanmetrics{% endif %}]
+      processors: [memory_limiter, resource, batch{% if has_appins and has_azure_metrics %}, metricstransform{% endif %}]
+      exporters: [{% if has_azure_metrics %}prometheusremotewrite/azure{% endif %}{% if debug_exporter_enabled %}{% if has_azure_metrics %}, {% endif %}debug{% endif %}]
+{% endif %}
+
+  {% set effective_log_level = otel_log_level | default('info') %}
+
+  telemetry:
+    logs:
+      level: {{ effective_log_level }}
+      {% if effective_log_level == 'debug' %}
+      development: true
+      encoding: "json"
+      {% endif %}
+    metrics:
+      level: detailed
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: 0.0.0.0
+                port: 8888

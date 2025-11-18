@@ -1,0 +1,46 @@
+{#
+  Health Check Routes
+  
+  APISIX provides built-in health endpoints via the Status API server (port 7085):
+    - GET /status       → Liveness probe (returns {"status":"ok"})
+    - GET /status/ready → Readiness probe (returns 200 after config loaded)
+  
+  These are available at http://127.0.0.1:7085 and should be used for
+  Kubernetes liveness/readiness probes.
+  
+  Kubernetes probe configuration:
+    readinessProbe:
+      httpGet:
+        path: /status/ready
+        port: 7085
+      periodSeconds: 10
+      timeoutSeconds: 2
+      failureThreshold: 3
+    
+    livenessProbe:
+      httpGet:
+        path: /status
+        port: 7085
+      periodSeconds: 10
+      timeoutSeconds: 2
+      failureThreshold: 3
+  
+  If you need a health endpoint on the proxy port (e.g., for external load balancers),
+  uncomment the route below. It uses the mocking plugin to return 200 without
+  touching any upstream.
+  
+  See: https://apisix.apache.org/docs/apisix/stand-alone/#enable-status-api
+#}
+
+# Uncomment if external systems require health checks on the proxy port (80/443):
+#  - id: healthz_proxy
+#    uri: /healthz
+#    methods: [GET]
+#    plugins:
+#      mocking:
+#        response_status: 200
+#        content_type: "text/plain"
+#        response_example: "OK"
+#    upstream:
+#      type: roundrobin
+#      nodes: { "127.0.0.1:1": 1 }  # Never used - mocking returns directly

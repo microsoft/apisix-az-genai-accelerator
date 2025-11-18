@@ -1,0 +1,154 @@
+{#
+  APISIX Core Configuration Template
+  
+  This template generates the main APISIX config.yaml file.
+  It configures APISIX core settings, nginx behavior, plugin allowlist,
+  plugin metadata, and deployment mode.
+  
+  Environment Variables:
+    - APISIX_LOG_LEVEL: Log level (debug, info, notice, warn, error, crit, alert, emerg)
+                        Default: warn
+  
+  See: https://apisix.apache.org/docs/apisix/config/
+#}
+# APISIX Configuration for Azure OpenAI Gateway
+# This file configures APISIX core settings and enabled plugins
+
+apisix:
+  node_listen:
+    - 9080
+  enable_admin: false  # File-driven standalone - no Admin API needed
+  
+  # Custom Lua modules and boot hooks
+  extra_lua_path: "/usr/local/apisix/extra/?.lua"
+  lua_module_hook: "ai_accel.hook"
+
+  # Disable proxy buffering globally for SSE streaming
+  proxy_cache:
+    zones:
+      - name: "disk_cache_one"
+        memory_size: 50m
+        disk_size: 1G
+        disk_path: /tmp/disk_cache_one
+        cache_levels: "1:2"
+
+  # Status API for health checks (liveness/readiness)
+  status:
+    ip: "127.0.0.1"
+    port: 7085
+
+nginx_config:
+  # Logging Configuration for Containerized Deployments
+  # Follows 12-factor app principles: logs to stdout/stderr for container log capture
+  # See: https://12factor.net/logs
+  # See: https://nginx.org/en/docs/ngx_core_module.html#error_log
+  
+  # error_log: stderr - Send error logs to standard error (captured by Docker/K8s)
+  # Avoids disk I/O and file management overhead in containerized environments
+  error_log: stderr
+  
+  # error_log_level: Controlled via APISIX_LOG_LEVEL env var (defaults to 'warn' in entrypoint)
+  # Valid values: debug, info, notice, warn, error, crit, alert, emerg
+  # Production: warn (minimal overhead) | Development: debug (full visibility)
+  error_log_level: {{ apisix_log_level | default('warn') }}
+  
+  # access_log: /dev/stdout - Send access logs to standard output (captured by Docker/K8s)
+  # See: https://nginx.org/en/docs/http/ngx_http_log_module.html#access_log
+  http_server_configuration_snippet: |
+    access_log /dev/stdout;
+
+# Top-level plugins allow-list (replaces APISIX defaults)
+# CRITICAL: This must be at top level, NOT under apisix:
+# See: https://apisix.apache.org/docs/apisix/terminology/plugin/
+plugins:
+  # Core AI Gateway Plugins (always active)
+  - ai-proxy-multi     # Multi-backend LLM routing with failover (used in all routes)
+                       # See: https://apisix.apache.org/docs/apisix/plugins/ai-proxy-multi/
+  - azure-openai-auth  # Custom auth plugin: api-key + Authorization: Bearer support
+                       # Location: gateway/lua/apisix/plugins/azure-openai-auth.lua
+  
+  # Traffic Management (always active)
+  - proxy-rewrite      # URI rewriting for health check endpoint
+                       # See: https://apisix.apache.org/docs/apisix/plugins/proxy-rewrite/
+  
+  # Observability (always active)
+  - request-id         # Request correlation via X-Request-ID header
+                       # See: https://apisix.apache.org/docs/apisix/plugins/request-id/
+  - proxy-buffering    # Per-route streaming control for chat/responses endpoints
+                       # See: https://apisix.apache.org/docs/apisix/plugins/proxy-buffering/
+  - proxy-control      # Per-route request buffering control (chat/responses)
+                       # See: https://apisix.apache.org/docs/apisix/plugins/proxy-control/
+  - prometheus         # Metrics export on port 9091
+                       # See: https://apisix.apache.org/docs/apisix/plugins/prometheus/
+  - file-logger        # Structured JSON logs to file for OTel Collector
+                       # See: https://apisix.apache.org/docs/apisix/plugins/file-logger/
+  - apim-gateway-logger # Emit APIM-style gateway logs to Log Analytics
+                        # Custom plugin: gateway/lua/apisix/plugins/apim-gateway-logger.lua
+  
+  # Optional Plugins (enabled via environment variables)
+  - cors               # CORS support (enabled via ENABLE_CORS=true)
+                       # See: https://apisix.apache.org/docs/apisix/plugins/cors/
+  - limit-req          # Rate limiting (enabled via ENABLE_RATE_LIMIT=true)
+                       # See: https://apisix.apache.org/docs/apisix/plugins/limit-req/
+  - limit-count        # Quota limiting (enabled via ENABLE_QUOTA=true)
+                       # See: https://apisix.apache.org/docs/apisix/plugins/limit-count/
+  - ai-rate-limiting   # Token-aware limits (enabled via ENABLE_AI_RATE_LIMIT=true)
+                       # See: https://apisix.apache.org/docs/apisix/plugins/ai-rate-limiting/
+  - apim-priority-headers # APIM-style priority headers (test mode only)
+                        # Location: gateway/lua/apisix/plugins/apim-priority-headers.lua
+  - openid-connect     # OIDC/OAuth2 auth (enabled via ENABLE_OIDC=true)
+                       # See: https://apisix.apache.org/docs/apisix/plugins/openid-connect/
+  - opentelemetry      # OpenTelemetry distributed tracing (always enabled)
+                       # See: https://apisix.apache.org/docs/apisix/plugins/opentelemetry/
+  - ip-restriction     # IP allowlist/blocklist (enabled via optional feature flags)
+                       # See: https://apisix.apache.org/docs/apisix/plugins/ip-restriction/
+  - response-rewrite   # Response transformation (enabled via optional feature flags)
+                       # See: https://apisix.apache.org/docs/apisix/plugins/response-rewrite/
+  - proxy-cache        # Response caching (enabled via optional feature flags)
+                       # See: https://apisix.apache.org/docs/apisix/plugins/proxy-cache/
+  - mocking            # Mock responses for testing/health checks (optional)
+                       # See: https://apisix.apache.org/docs/apisix/plugins/mocking/
+
+# Plugin metadata defaults
+plugin_attr:
+  prometheus:
+    export_addr:
+      ip: "0.0.0.0"
+      port: 9091
+    # Adjust latency histogram buckets for GenAI workloads (milliseconds)
+    # Note: LLM labels (consumer, request_type, llm_model) are automatically
+    # added by APISIX 3.14+ when using ai-proxy plugin with prometheus
+    default_buckets: [10, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 30000, 60000]
+    
+    # Add custom backend error tracking metric with extra labels
+    # This captures backend errors before failover (429, 5xx) for observability
+    # Two labels allow flexible querying: filter by backend, by status, or both
+    metrics:
+      http_status:
+        extra_labels:
+          - backend_identifier: $backend_identifier
+          - backend_error_status: $backend_error_status
+  ai-proxy-multi:
+    # Pricing references (USD per 1M tokens) used by dashboards and downstream processors.
+    model_pricing:
+      gpt-5-mini:
+        prompt_tokens_usd_per_million: 0.10
+        completion_tokens_usd_per_million: 0.60
+      text-embedding-3-small:
+        input_tokens_usd_per_million: 0.02
+  
+  request-id:
+    algorithm: "uuid"
+    header_name: "X-Request-ID"
+  
+  http-logger:
+    include_req_body: false
+    include_resp_body: false
+    concat_method: "json"
+
+# Deployment configuration - Standalone mode (no etcd, config from apisix.yaml)
+# APISIX_STAND_ALONE=true requires role: data_plane with yaml config_provider
+deployment:
+  role: data_plane
+  role_data_plane:
+    config_provider: yaml

@@ -1,0 +1,43 @@
+{#
+  CORS (Cross-Origin Resource Sharing) Plugin
+  
+  Enables CORS support for browser-based applications to access the API
+  from different origins.
+  
+  Environment Variables:
+    - ENABLE_CORS: Set to "true" to enable CORS (default: false)
+    - CORS_ALLOW_ORIGINS: Allowed origins (e.g., "https://example.com,https://app.example.com")
+                          Default: "" (empty = no CORS)
+    - CORS_ALLOW_METHODS: Allowed HTTP methods (e.g., "GET,POST,PUT,DELETE")
+                          Default: ""
+    - CORS_ALLOW_HEADERS: Allowed request headers (e.g., "Content-Type,Authorization")
+                          Default: ""
+    - CORS_EXPOSE_HEADERS: Headers exposed to browser (e.g., "X-Request-ID")
+                           Default: ""
+    - CORS_MAX_AGE: Preflight cache duration in seconds (default: 86400 = 24h)
+    - CORS_ALLOW_CREDENTIALS: Allow credentials (cookies, auth) (default: false)
+  
+  Example:
+    ENABLE_CORS=true
+    CORS_ALLOW_ORIGINS="https://myapp.com"
+    CORS_ALLOW_METHODS="GET,POST,OPTIONS"
+    CORS_ALLOW_HEADERS="Content-Type,Authorization,X-Request-ID"
+    CORS_EXPOSE_HEADERS="X-Request-ID"
+  
+  See: https://apisix.apache.org/docs/apisix/plugins/cors/
+#}
+{% if enable_cors | default(false) and cors_allow_origins | default('') %}
+cors:
+  allow_origins: {{ cors_allow_origins | tojson }}
+{% if cors_allow_methods | default('') %}
+  allow_methods: {{ cors_allow_methods | tojson }}
+{% endif %}
+{% if cors_allow_headers | default('') %}
+  allow_headers: {{ cors_allow_headers | tojson }}
+{% endif %}
+{% if cors_expose_headers | default('') %}
+  expose_headers: {{ cors_expose_headers | tojson }}
+{% endif %}
+  max_age: {{ cors_max_age | default(86400) | int }}
+  allow_credential: {{ cors_allow_credentials | default(false) | tojson }}
+{% endif %}

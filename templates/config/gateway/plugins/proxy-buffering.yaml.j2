@@ -1,0 +1,10 @@
+{#
+  Proxy Buffering Plugin (per-route)
+
+  Disables Nginx proxy buffering for streaming responses, enabling
+  Server-Sent Events (SSE) or similar token streaming on specific routes.
+
+  Docs: https://apisix.apache.org/docs/apisix/plugins/proxy-buffering/
+#}
+proxy-buffering:
+  disable_proxy_buffering: true

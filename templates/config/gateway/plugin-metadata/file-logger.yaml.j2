@@ -1,0 +1,57 @@
+{#
+  Structured Logging Metadata for file-logger Plugin
+  
+  This template configures the log format for the file-logger plugin with
+  LLM-specific fields for APISIX 3.14+ GenAI analytics.
+  
+  APISIX 3.14+ LLM Variables:
+    - $llm_model: Model name from request or response
+    - $request_llm_model: Model name from original request
+    - $llm_prompt_tokens: Number of prompt tokens used
+    - $llm_completion_tokens: Number of completion tokens generated
+    - $llm_time_to_first_token: TTFT in milliseconds for streaming responses
+    - $request_type: ai_chat | ai_stream | ai_embeddings | ai_responses
+  
+  See: https://apisix.apache.org/docs/apisix/plugins/file-logger/
+  See: https://github.com/apache/apisix/releases/tag/3.14.0 (LLM variables)
+#}
+- id: file-logger
+  log_format:
+    # Timestamp & Identity
+    time: "$time_iso8601"
+    route_id: "$route_id"
+    service_id: "$service_id"
+    consumer: "$consumer_name"
+    client_ip: "$remote_addr"
+    
+    # Request Correlation (for trace/log correlation)
+    request_id: "$http_x_request_id"
+    conversation_id: "$http_x_conversation_id"
+    trace_id: "$opentelemetry_trace_id"
+    
+    # Request Details
+    method: "$request_method"
+    path: "$uri"
+    query: "$args"
+    status: "$status"
+    
+    # Upstream Details
+    upstream_addr: "$upstream_addr"
+    upstream_status: "$upstream_status"
+    upstream_response_time: "$upstream_response_time"
+    
+    # Latency & Bandwidth
+    latency_s: "$request_time"
+    bytes_in: "$request_length"
+    bytes_out: "$bytes_sent"
+    
+    # LLM/AI Analytics (APISIX 3.14+)
+    llm.model: "$llm_model"
+    llm.request_model: "$request_llm_model"
+    llm.prompt_tokens: "$llm_prompt_tokens"
+    llm.completion_tokens: "$llm_completion_tokens"
+    llm.ttft_ms: "$llm_time_to_first_token"
+    request_type: "$request_type"
+    
+    # Backend Region (Azure AOAI specific)
+    backend_region: "$upstream_http_x_ms_region"

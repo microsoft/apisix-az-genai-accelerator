@@ -1,0 +1,67 @@
+{#
+  APISIX Routes Configuration - Main Orchestrator
+  
+  This is the main template that assembles all route, plugin, and configuration
+  pieces into the final apisix.yaml file.
+  
+  This file is rendered at container startup by gateway-renderer and loaded by
+  APISIX in standalone mode (file-driven, no Admin API or etcd).
+  
+  Template Structure:
+    - routes/: Route definitions (health checks, OpenAI endpoints)
+    - auth/: Authentication configuration (consumers, OIDC, API keys)
+    - plugins/: Plugin configurations (CORS, rate limiting, caching, etc.)
+    - observability/: Monitoring and tracing (OpenTelemetry, Prometheus)
+  
+  Environment Variables:
+    See individual template files in subdirectories for specific variables.
+    All configuration is environment-driven - this template just orchestrates.
+  
+  Customization:
+    To add/remove features, simply comment/uncomment the corresponding include.
+    To customize a feature, edit the specific template file in its subdirectory.
+  
+  Generated file: /usr/local/apisix/conf/apisix.yaml
+  See: https://apisix.apache.org/docs/apisix/stand-alone/
+#}
+#################################################################
+# APISIX Routes Configuration
+# Generated from templates/ - DO NOT EDIT DIRECTLY
+# This file is auto-generated at container startup
+#################################################################
+
+#============================================================
+# ROUTES
+#============================================================
+routes:
+{% filter indent(width=2, first=True, blank=True) %}
+{% include "routes/health.yaml.j2" %}
+{% include "routes/openai-chat.yaml.j2" %}
+{% include "routes/openai-completions.yaml.j2" %}
+{% include "routes/openai-embeddings.yaml.j2" %}
+{% include "routes/openai-responses.yaml.j2" %}
+{% if gateway_e2e_test_mode %}
+{% include "routes/latency-routing.yaml.j2" %}
+{% include "routes/prioritization-simple.yaml.j2" %}
+{% include "routes/config-api-proxy.yaml.j2" %}
+{% endif %}
+{% endfilter %}
+
+#============================================================
+# CONSUMERS (Authentication)
+#============================================================
+{% include "auth/key-auth-consumers.yaml.j2" %}
+
+#============================================================
+# PLUGIN METADATA (Global Plugin Configuration)
+#============================================================
+# plugin_metadata configures global settings for plugins.
+# This is separate from route-level plugin configs (in plugins/ directory).
+# Format: List of {- id: plugin-name, ...config...} objects
+plugin_metadata:
+{% filter indent(width=2, first=True, blank=True) %}
+{% include "plugin-metadata/opentelemetry.yaml.j2" %}
+{% include "plugin-metadata/file-logger.yaml.j2" %}
+{% endfilter %}
+
+#END
