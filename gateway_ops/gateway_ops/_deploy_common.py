@@ -114,10 +114,16 @@ def ensure_tfvars(
     if target.exists():
         return target
 
-    example = stack_dir / "terraform.tfvars.example"
-    if not example.exists():
+    candidates = [
+        stack_dir / f"terraform.tfvars.{env}.example",
+        stack_dir / f"{env}.tfvars.example",
+        stack_dir / "terraform.tfvars.example",
+    ]
+
+    example = next((path for path in candidates if path.exists()), None)
+    if example is None:
         raise FileNotFoundError(
-            f"No tfvars present for env '{env}' and terraform.tfvars.example missing in {stack_dir}"
+            f"No tfvars present for env '{env}' and no example tfvars found in {stack_dir}"
         )
 
     target.write_text(example.read_text())

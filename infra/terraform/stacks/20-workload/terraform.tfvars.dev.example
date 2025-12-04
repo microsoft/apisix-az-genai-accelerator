@@ -1,0 +1,61 @@
+# Environment-specific tfvars for 20-workload (dev)
+
+subscription_id = "00000000-0000-0000-0000-000000000000"
+tenant_id        = "11111111-1111-1111-1111-111111111111"
+
+environment_code = "dev"
+location         = "eastus"
+workload_name    = "apisix"
+identifier       = ""
+
+platform_resource_group_name = "rg-platform-apisix-dev-eastus"
+platform_acr_name            = "acrplatformapisixdeveastus"
+key_vault_name               = "kv-apisix-dev-eastus"
+aca_managed_identity_id      = "/subscriptions/.../resourceGroups/.../providers/Microsoft.ManagedIdentity/userAssignedIdentities/aca-kv"
+
+state_resource_group_name  = "rg-terraform-state"
+state_storage_account_name = "stterraformstate123"
+state_container_name       = "tfstate"
+foundation_state_blob_key  = "dev/10-platform.tfstate"
+openai_state_blob_key      = "dev/15-openai.tfstate"
+
+app_settings = {
+  APISIX_LOG_LEVEL        = "info"
+  GATEWAY_REQUIRE_AUTH    = "true"
+  OTEL_SAMPLE_RATE        = "1.0"
+  ENABLE_DEBUG_EXPORTER   = "false"
+  AI_PROXY_CONNECT_TIMEOUT = "60"
+  AI_PROXY_SEND_TIMEOUT    = "300"
+  AI_PROXY_READ_TIMEOUT    = "300"
+  AI_PROXY_LOG_SUMMARIES   = "true"
+}
+
+secret_names = [
+  "gateway-client-key-0",
+  "azure-openai-primary-key-0",
+]
+
+direct_environment_variables = {}
+
+gateway_image = "acrplatformapisixdeveastus.azurecr.io/apisix-az-genai-accelerator/gateway:latest"
+hydrenv_image = "acrplatformapisixdeveastus.azurecr.io/apisix-az-genai-accelerator/hydrenv:latest"
+
+expose_gateway_public = true
+gateway_target_port   = 9080
+gateway_cpu           = 1.0
+gateway_memory        = "2Gi"
+gateway_min_replicas  = 1
+gateway_max_replicas  = 3
+
+log_analytics_workspace_id   = ""
+log_retention_days           = 30
+app_insights_connection_string = "InstrumentationKey=...;IngestionEndpoint=https://..."
+
+enable_alerts         = false
+alert_action_group_id = ""
+
+tags = {
+  owner       = "platform-team"
+  environment = "dev"
+  workload    = "apisix"
+}
