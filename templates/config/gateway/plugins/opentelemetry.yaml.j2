@@ -27,7 +27,6 @@
 #}
 # OpenTelemetry distributed tracing
 # Global config (collector endpoint, service name, etc.) is in plugin_metadata
-# This enables the plugin on this route with always_on sampling
-opentelemetry:
-  sampler:
-    name: "always_on"  # Sample all requests for this route
+# Keep plugin enablement lightweight and let global sampler (OTEL_SAMPLE_RATE)
+# control the effective sampling rate.
+opentelemetry: {}
