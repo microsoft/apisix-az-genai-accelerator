@@ -68,7 +68,7 @@ receivers:
   filelog:
     include:
       - {{ apisix_logs_path | default('/usr/local/apisix/logs/genai_access.json') }}
-    start_at: beginning
+    start_at: end
     operators:
       - type: json_parser
         parse_from: body
