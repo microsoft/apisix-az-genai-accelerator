@@ -269,7 +269,7 @@ resource "azurerm_container_app" "gateway" {
 
       env {
         name  = "ENABLE_DEBUG_EXPORTER"
-        value = "true"
+        value = "false"
       }
 
       volume_mounts {
