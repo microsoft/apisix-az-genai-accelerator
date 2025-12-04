@@ -41,7 +41,10 @@ ai-proxy-multi:
 {% endif %}
       override:
         endpoint: "{{ b.ENDPOINT }}"
-      timeout: { connect: 60, send: 300, read: 300 }
+      timeout:
+        connect: {{ (ai_proxy_connect_timeout | default(60)) | int }}
+        send: {{ (ai_proxy_send_timeout | default(300)) | int }}
+        read: {{ (ai_proxy_read_timeout | default(300)) | int }}
 {% endfor %}
   balancer:
     algorithm: {{ lb_alg | default('roundrobin') | tojson }}   # roundrobin | chash
@@ -53,7 +56,7 @@ ai-proxy-multi:
   # This allows the plugin to try alternate instances on any failure
   fallback_strategy: ["http_429", "http_5xx"]
   logging:
-    summaries: true
+    summaries: {{ ai_proxy_log_summaries | default(true) | tojson }}
 {% if apisix_active_health_checks | default(false) %}
   checks:
     active:
