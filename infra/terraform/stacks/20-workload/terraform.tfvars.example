@@ -8,7 +8,7 @@
 
 # Subscription / tenant IDs (same as previous stacks)
 subscription_id = "00000000-0000-0000-0000-000000000000"
-tenant_id        = "11111111-1111-1111-1111-111111111111"
+tenant_id       = "11111111-1111-1111-1111-111111111111"
 
 # Naming inputs
 environment_code = "dev"
@@ -35,10 +35,10 @@ app_settings = {
   GATEWAY_REQUIRE_AUTH = "true"
 }
 
-# Key Vault secret names (should align with secrets populated by sync-env.sh)
+# Key Vault secret names (should align with secrets populated by deploy-vars)
 secret_names = [
   "gateway-client-key-0",
-  "azure-openai-primary-key-0"
+  "azure-openai-key-0"
 ]
 
 # Additional env vars that are safe to inline (rare; prefer Key Vault)
@@ -61,13 +61,13 @@ otel_collector_cpu    = 0.25
 otel_collector_memory = "0.5Gi"
 
 # Observability
-log_analytics_workspace_id = ""
-log_retention_days          = 30
+log_analytics_workspace_id     = ""
+log_retention_days             = 30
 app_insights_connection_string = "InstrumentationKey=...;IngestionEndpoint=https://..."
 
 # Alerts (optional)
-enable_alerts          = false
-alert_action_group_id  = ""
+enable_alerts         = false
+alert_action_group_id = ""
 
 tags = {
   owner       = "platform-team"

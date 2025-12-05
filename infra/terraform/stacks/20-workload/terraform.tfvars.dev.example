@@ -1,7 +1,7 @@
 # Environment-specific tfvars for 20-workload (dev)
 
 subscription_id = "00000000-0000-0000-0000-000000000000"
-tenant_id        = "11111111-1111-1111-1111-111111111111"
+tenant_id       = "11111111-1111-1111-1111-111111111111"
 
 environment_code = "dev"
 location         = "eastus"
@@ -20,10 +20,10 @@ foundation_state_blob_key  = "dev/10-platform.tfstate"
 openai_state_blob_key      = "dev/15-foundry.tfstate"
 
 app_settings = {
-  APISIX_LOG_LEVEL        = "info"
-  GATEWAY_REQUIRE_AUTH    = "true"
-  OTEL_SAMPLE_RATE        = "1.0"
-  ENABLE_DEBUG_EXPORTER   = "false"
+  APISIX_LOG_LEVEL         = "info"
+  GATEWAY_REQUIRE_AUTH     = "true"
+  OTEL_SAMPLE_RATE         = "1.0"
+  ENABLE_DEBUG_EXPORTER    = "false"
   AI_PROXY_CONNECT_TIMEOUT = "60"
   AI_PROXY_SEND_TIMEOUT    = "300"
   AI_PROXY_READ_TIMEOUT    = "300"
@@ -32,7 +32,7 @@ app_settings = {
 
 secret_names = [
   "gateway-client-key-0",
-  "azure-openai-primary-key-0",
+  "azure-openai-key-0",
 ]
 
 direct_environment_variables = {}
@@ -50,13 +50,13 @@ gateway_max_replicas  = 3
 otel_collector_cpu    = 0.25
 otel_collector_memory = "0.5Gi"
 
-log_analytics_workspace_id   = ""
-azure_monitor_workspace_id   = ""
-azure_monitor_prometheus_endpoint = ""
+log_analytics_workspace_id              = ""
+azure_monitor_workspace_id              = ""
+azure_monitor_prometheus_endpoint       = ""
 azure_monitor_prometheus_query_endpoint = ""
-azure_monitor_prometheus_dcr_id = ""
-log_retention_days           = 30
-app_insights_connection_string = "InstrumentationKey=...;IngestionEndpoint=https://..."
+azure_monitor_prometheus_dcr_id         = ""
+log_retention_days                      = 30
+app_insights_connection_string          = "InstrumentationKey=...;IngestionEndpoint=https://..."
 
 enable_alerts         = false
 alert_action_group_id = ""

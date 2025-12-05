@@ -31,7 +31,7 @@ def _run_command(command: list[str]) -> str:
 def _load_auto_tfvars() -> dict[str, Any]:
     if not ENV_AUTO_FILE.exists():
         raise FileNotFoundError(
-            f"{ENV_AUTO_FILE} is missing. Run 'uv run sync-env -- <env> [--key-vault <name>]' first."
+            f"{ENV_AUTO_FILE} is missing. Run 'uv run deploy-vars -- <env> [--key-vault <name>]' first."
         )
     return json.loads(ENV_AUTO_FILE.read_text())
 

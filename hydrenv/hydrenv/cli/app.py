@@ -10,6 +10,7 @@ from typing_extensions import Annotated
 
 from ..core.models import RenderConfig, RenderTask
 from ..environment import processor, grouping
+from ..environment.grouping import GroupingValidationError
 from ..rendering import engine
 from .parsers import parse_file_mode, parse_group_config, parse_render
 
@@ -119,24 +120,34 @@ def render(
     # Apply indexed grouping strategies
     for group_config_json in indexed_groups:
         group_config = parse_group_config(group_config_json, "indexed")
-        grouping.apply_grouping_strategy(
-            context,
-            "indexed",
-            group_config["prefix"],
-            group_config["required_keys"],
-            group_config.get("optional_keys"),
-        )
+        try:
+            grouping.apply_grouping_strategy(
+                context,
+                "indexed",
+                group_config["prefix"],
+                group_config["required_keys"],
+                group_config.get("optional_keys"),
+                group_config.get("require_when_env"),
+            )
+        except GroupingValidationError as exc:
+            logger.error(str(exc))
+            raise typer.Exit(code=1) from exc
 
     # Apply sequential grouping strategies
     for group_config_json in sequential_groups:
         group_config = parse_group_config(group_config_json, "sequential")
-        grouping.apply_grouping_strategy(
-            context,
-            "sequential",
-            group_config["prefix"],
-            group_config["required_keys"],
-            group_config.get("optional_keys"),
-        )
+        try:
+            grouping.apply_grouping_strategy(
+                context,
+                "sequential",
+                group_config["prefix"],
+                group_config["required_keys"],
+                group_config.get("optional_keys"),
+                group_config.get("require_when_env"),
+            )
+        except GroupingValidationError as exc:
+            logger.error(str(exc))
+            raise typer.Exit(code=1) from exc
 
     # Render templates
     outputs = engine.render_all(config, context)

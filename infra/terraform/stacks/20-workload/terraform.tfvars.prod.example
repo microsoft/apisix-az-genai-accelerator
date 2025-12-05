@@ -1,7 +1,7 @@
 # Environment-specific tfvars for 20-workload (prod)
 
 subscription_id = "00000000-0000-0000-0000-000000000000"
-tenant_id        = "11111111-1111-1111-1111-111111111111"
+tenant_id       = "11111111-1111-1111-1111-111111111111"
 
 environment_code = "prod"
 location         = "eastus"
@@ -32,7 +32,7 @@ app_settings = {
 
 secret_names = [
   "gateway-client-key-0",
-  "azure-openai-primary-key-0",
+  "azure-openai-key-0",
 ]
 
 direct_environment_variables = {}
@@ -50,8 +50,8 @@ gateway_max_replicas  = 10
 otel_collector_cpu    = 0.25
 otel_collector_memory = "0.5Gi"
 
-log_analytics_workspace_id   = ""
-log_retention_days           = 60
+log_analytics_workspace_id     = ""
+log_retention_days             = 60
 app_insights_connection_string = "InstrumentationKey=...;IngestionEndpoint=https://..."
 
 enable_alerts         = true

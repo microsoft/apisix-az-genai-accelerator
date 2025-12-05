@@ -5,7 +5,7 @@ import logging
 import subprocess
 from typing import Iterable, Mapping
 
-from tenacity import (
+from tenacity import (  # type: ignore[import-not-found]
     before_sleep_log,
     retry,
     retry_if_exception_type,
@@ -121,14 +121,16 @@ def _read_existing_secret(
 
 
 def _load_foundry_outputs(
-    env: str,
+    _env: str,
     *,
     ctx: AzureContext,
     paths: Paths,
     bootstrap: BootstrapState,
 ) -> tuple[list[str], list[str]] | None:
     if not paths.foundry.exists():
-        logger.info("15-foundry stack not present; skipping provisioned OpenAI discovery")
+        logger.info(
+            "15-foundry stack not present; skipping provisioned OpenAI discovery"
+        )
         return None
 
     try:
@@ -198,15 +200,14 @@ def seed_openai_secrets(
     )
 
     if not candidate_names and allow_placeholders:
-        candidate_names = ["azure-openai-primary-key-0"]
+        candidate_names = ["azure-openai-key-0"]
 
     if not candidate_names:
         logger.info("No OpenAI secret names to seed; skipping")
         return {"seeded": [], "placeholders": [], "unchanged": [], "skipped": []}
 
-    has_real_values = (
-        len(provisioned_names) > 0
-        and len(provisioned_names) == len(provisioned_values)
+    has_real_values = len(provisioned_names) > 0 and len(provisioned_names) == len(
+        provisioned_values
     )
     desired_source_tags = FOUNDATION_TAGS if has_real_values else PLACEHOLDER_TAGS
     summary: dict[str, list[str]] = {
@@ -223,7 +224,11 @@ def seed_openai_secrets(
         existing_value, existing_tags = _read_existing_secret(vault_name, name)
 
         existing_source = existing_tags.get("source", "")
-        if has_real_values and existing_source == "foundry" and existing_value == desired_value:
+        if (
+            has_real_values
+            and existing_source == "foundry"
+            and existing_value == desired_value
+        ):
             summary["unchanged"].append(name)
             continue
 
@@ -232,7 +237,11 @@ def seed_openai_secrets(
             summary["skipped"].append(name)
             continue
 
-        if not has_real_values and existing_source == "pending" and existing_value == desired_value:
+        if (
+            not has_real_values
+            and existing_source == "pending"
+            and existing_value == desired_value
+        ):
             summary["unchanged"].append(name)
             continue
 

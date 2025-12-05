@@ -5,15 +5,9 @@ import json
 import logging
 import subprocess
 import sys
+from typing import Any
 
 from ._deploy_common import (
-    AzureContext,
-    BootstrapState,
-    FoundationState,
-    Paths,
-    azure_context,
-    load_bootstrap_state,
-    load_foundation_state,
     resolve_paths,
 )
 from ._openai_secrets import seed_openai_secrets, set_secret_with_retry
@@ -27,23 +21,26 @@ def resolve_key_vault(env: str, override: str) -> str:
     if explicit != "":
         return explicit
 
-    ensure(["terraform"])
-
-    try:
-        ctx: AzureContext = azure_context()
-        paths: Paths = resolve_paths()
-        bootstrap: BootstrapState = load_bootstrap_state(env, paths, ctx)
-        foundation: FoundationState = load_foundation_state(env, paths, ctx, bootstrap)
-    except (FileNotFoundError, subprocess.CalledProcessError, KeyError) as exc:
-        raise RuntimeError(
-            "Failed to resolve Key Vault from terraform outputs; supply --key-vault to override."
-        ) from exc
-
-    if foundation.key_vault_name != "":
-        return foundation.key_vault_name
+    # Prefer the locally cached tfvars (written by deploy-vars after first apply)
+    tfvars_path = (
+        repo_root()
+        / "infra"
+        / "terraform"
+        / "stacks"
+        / "20-workload"
+        / "environment.auto.tfvars.json"
+    )
+    if tfvars_path.exists():
+        try:
+            data = json.loads(tfvars_path.read_text())
+            kv = str(data.get("key_vault_name", "")).strip()
+            if kv:
+                return kv
+        except Exception:
+            pass
 
     raise RuntimeError(
-        "Key Vault name missing from terraform outputs. Provide --key-vault to continue."
+        "Key Vault name not found. Provide --key-vault or ensure environment.auto.tfvars.json exists with key_vault_name."
     )
 
 
@@ -111,7 +108,7 @@ def _infer_openai_secret_names(app_settings: dict[str, str]) -> list[str]:
         maybe_index = key.rsplit("_", 1)[-1]
         if maybe_index.isdigit():
             indices.add(int(maybe_index))
-    return [f"azure-openai-primary-key-{idx}" for idx in sorted(indices)]
+    return [f"azure-openai-key-{idx}" for idx in sorted(indices)]
 
 
 def _log_openai_seed_summary(summary: dict[str, list[str]]) -> None:
@@ -128,10 +125,26 @@ def _log_openai_seed_summary(summary: dict[str, list[str]]) -> None:
     )
 
 
+def _load_workload_outputs(env: str) -> dict[str, Any]:
+    ensure(["terraform"])
+    root = repo_root()
+    stack_dir = root / "infra" / "terraform" / "stacks" / "20-workload"
+    raw = run_logged(
+        ["terraform", f"-chdir={stack_dir}", "output", "-json"],
+        capture_output=True,
+    ).stdout
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(
+            f"Unable to parse workload terraform outputs for env '{env}': {exc}"
+        ) from exc
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        prog="sync-env",
-        description="Sync config/appsettings.<env>.env and secrets.<env>.env into Key Vault and environment.auto.tfvars.json.",
+        prog="deploy-vars",
+        description="Sync config/appsettings.<env>.env and secrets.<env>.env into Key Vault and environment.auto.tfvars.json, then apply terraform (unless --no-apply).",
     )
     parser.add_argument("env")
     parser.add_argument(
@@ -141,6 +154,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--identifier", default="")
     parser.add_argument("--use-provisioned-openai", action="store_true")
+    parser.add_argument(
+        "--no-apply",
+        action="store_true",
+        help="Skip Terraform apply; only update tfvars and Key Vault.",
+    )
     args = parser.parse_args(argv)
 
     ensure(["az"])
@@ -208,6 +226,37 @@ def main(argv: list[str] | None = None) -> int:
         f"Synced env '{args.env}' (settings: {settings_count}, secrets tracked: {len(unique_keys)})"
     )
     print(f"Wrote {tfvars_out}")
+    if args.no_apply:
+        print("Skipped Terraform apply (--no-apply).")
+        return 0
+
+    ensure(["terraform"])
+    print("Applying workload stack to roll a new revision with updated env vars ...")
+    tfvars_candidates = [
+        workload_dir / f"terraform.tfvars.{args.env}",
+        workload_dir / f"{args.env}.tfvars",
+        workload_dir / f"{args.env}.tfvars.json",
+        workload_dir / "terraform.tfvars",
+    ]
+    var_file_args: list[str] = []
+    for candidate in tfvars_candidates:
+        if candidate.exists():
+            var_file_args.extend(["-var-file", str(candidate)])
+            break
+
+    run_logged(
+        [
+            "terraform",
+            f"-chdir={workload_dir}",
+            "apply",
+            *var_file_args,
+            "-auto-approve",
+            "-input=false",
+            "-compact-warnings",
+        ],
+        capture_output=False,
+    )
+    print("✓ Terraform apply completed")
     return 0
 
 

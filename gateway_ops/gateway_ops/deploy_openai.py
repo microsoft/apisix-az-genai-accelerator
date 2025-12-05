@@ -101,7 +101,7 @@ def deploy_foundry(
     if len(seed_summary["seeded"]) == 0:
         logger.warning(
             "Foundry apply succeeded but no OpenAI secrets were seeded into %s; "
-            "rerun sync-env after verifying terraform outputs",
+            "rerun deploy-vars after verifying terraform outputs",
             foundation.key_vault_name,
         )
     else:

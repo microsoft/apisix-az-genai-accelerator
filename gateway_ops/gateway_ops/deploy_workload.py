@@ -243,7 +243,7 @@ def _detect_openai_state(
 
 
 def _sync_environment(env: str, key_vault: str, use_provisioned_openai: bool) -> None:
-    sync_cmd = ["uv", "run", "sync-env", env]
+    sync_cmd = ["uv", "run", "deploy-vars", env]
     if key_vault != "":
         sync_cmd.extend(["--key-vault", key_vault])
     identifier = os.environ.get("TF_VAR_identifier")

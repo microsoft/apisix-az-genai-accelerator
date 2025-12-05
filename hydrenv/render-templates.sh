@@ -21,7 +21,7 @@ hydrenv \
   --render /templates/config/gateway/config.yaml.j2="$GATEWAY_CONF_OUT/config.yaml" \
   --render /templates/config/otel-collector/config.yaml.j2="$OUT/otel-collector/config.yaml" \
   --indexed '{"prefix":"AZURE_OPENAI_","required_keys":["ENDPOINT"],"optional_keys":["KEY","PRIORITY","WEIGHT","NAME"]}' \
-  --sequential '{"prefix":"GATEWAY_CLIENT_","required_keys":["NAME","KEY"]}' \
+  --sequential '{"prefix":"GATEWAY_CLIENT_","required_keys":["NAME","KEY"],"require_when_env":"GATEWAY_REQUIRE_AUTH"}' \
   --enable-key-vault \
   --verbose
 

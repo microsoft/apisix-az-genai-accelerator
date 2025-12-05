@@ -54,6 +54,8 @@ AZURE_OPENAI_ENDPOINT_2=https://api-2.openai.azure.com
 
 **Result:** `azure_openai_backends = [{"endpoint": "...", "key": "secret1"}, {"endpoint": "...", "key": None}]`
 
+`hydrenv` fails fast if an indexed group is missing any required key (e.g., `AZURE_OPENAI_KEY_1` without `AZURE_OPENAI_ENDPOINT_1`).
+
 ### Sequential Strategy
 
 Collects groups starting at index 0, stops at first missing required key. Use `--sequential` flag with JSON config.
@@ -79,6 +81,10 @@ GATEWAY_CLIENT_KEY_1=def456
 ```
 
 **Result:** `gateway_clients = [{"name": "web", "key": "abc123", "rate_limit": "100"}, {"name": "mobile", "key": "def456", "rate_limit": None}]`
+
+Sequential groups are validated for contiguity (start at `0`, no gaps) and for required keys. A partial group (e.g., `GATEWAY_CLIENT_KEY_0` without `GATEWAY_CLIENT_NAME_0`) now causes `hydrenv` to exit with an error.
+
+To require at least one group only when a feature flag is enabled, include `"require_when_env": "ENV_VAR_NAME"` in the JSON. Example: `"require_when_env": "GATEWAY_REQUIRE_AUTH"` makes `hydrenv` fail if auth is enabled but no `GATEWAY_CLIENT_*` entries are provided.
 
 ## Options
 

@@ -15,7 +15,7 @@ output "azure_openai_endpoints" {
 output "azure_openai_key_vault_secret_names" {
   description = "Key Vault secret names for Azure AI Foundry API keys"
   value = local.key_vault_available ? [
-    for idx in sort(keys(module.ai_foundry)) : "azure-openai-primary-key-${idx}"
+    for idx in sort(keys(module.ai_foundry)) : "azure-openai-key-${idx}"
   ] : []
 }
 
