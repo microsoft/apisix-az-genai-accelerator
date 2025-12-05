@@ -82,6 +82,8 @@ module "platform_acr" {
 }
 
 resource "azurerm_monitor_diagnostic_setting" "acr" {
+  count = var.log_analytics_workspace_id == "" ? 0 : 1
+
   name                       = module.naming_acr_diag.monitor_diagnostic_setting.name_unique
   target_resource_id         = module.platform_acr.acr_id
   log_analytics_workspace_id = var.log_analytics_workspace_id

@@ -95,6 +95,24 @@ variable "openai_state_blob_key" {
   type        = string
 }
 
+variable "remote_state_resource_group_name" {
+  description = "Resource group for remote state (optional; normally supplied via TF_VAR)"
+  type        = string
+  default     = ""
+}
+
+variable "remote_state_storage_account_name" {
+  description = "Storage account for remote state (optional; normally supplied via TF_VAR)"
+  type        = string
+  default     = ""
+}
+
+variable "remote_state_container_name" {
+  description = "Container for remote state (optional; normally supplied via TF_VAR)"
+  type        = string
+  default     = ""
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Application configuration
 # ─────────────────────────────────────────────────────────────────────────────
@@ -245,6 +263,60 @@ variable "log_retention_days" {
   default     = 30
 }
 
+variable "gateway_log_ingest_dce_id" {
+  description = "Data Collection Endpoint ID for gateway log ingestion (from observability stack)"
+  type        = string
+  default     = ""
+}
+
+variable "gateway_log_ingest_dcr_id" {
+  description = "Data Collection Rule ID for gateway log ingestion (from observability stack)"
+  type        = string
+  default     = ""
+}
+
+variable "gateway_log_ingest_uri" {
+  description = "Gateway log ingestion URI for APISIX logs (from observability stack)"
+  type        = string
+  default     = ""
+}
+
+variable "gateway_log_stream_name" {
+  description = "Gateway log stream name (from observability stack)"
+  type        = string
+  default     = "Custom-APISIXGatewayLogs"
+}
+
+variable "gateway_log_table_name" {
+  description = "Gateway log custom table name"
+  type        = string
+  default     = "APISIXGatewayLogs_CL"
+}
+
+variable "azure_monitor_workspace_id" {
+  description = "Existing Azure Monitor workspace ID (optional, otherwise created)"
+  type        = string
+  default     = ""
+}
+
+variable "azure_monitor_prometheus_endpoint" {
+  description = "Prometheus remote-write endpoint for Azure Monitor (required when providing existing workspace)"
+  type        = string
+  default     = ""
+}
+
+variable "azure_monitor_prometheus_query_endpoint" {
+  description = "Prometheus query endpoint (optional, for dashboards)"
+  type        = string
+  default     = ""
+}
+
+variable "azure_monitor_prometheus_dcr_id" {
+  description = "Data Collection Rule ID for Prometheus ingestion (optional, defaults to workspace default)"
+  type        = string
+  default     = ""
+}
+
 variable "app_insights_connection_string" {
   description = "Existing Application Insights connection string"
   type        = string
@@ -264,6 +336,18 @@ variable "otel_collector_image" {
   default     = "otel/opentelemetry-collector-contrib:0.138.0"
 }
 
+variable "otel_collector_cpu" {
+  description = "CPU cores for OTel Collector sidecar"
+  type        = number
+  default     = 0.25
+}
+
+variable "otel_collector_memory" {
+  description = "Memory for OTel Collector sidecar"
+  type        = string
+  default     = "0.5Gi"
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Alerts
 # ─────────────────────────────────────────────────────────────────────────────
@@ -272,6 +356,12 @@ variable "enable_alerts" {
   description = "Enable Azure Monitor alert rules"
   type        = bool
   default     = false
+}
+
+variable "alert_action_group_id" {
+  description = "Optional existing Action Group ID for alerts"
+  type        = string
+  default     = ""
 }
 
 variable "alert_email_receivers" {

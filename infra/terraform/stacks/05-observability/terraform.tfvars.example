@@ -1,0 +1,20 @@
+# Example tfvars for 05-observability
+
+subscription_id = "00000000-0000-0000-0000-000000000000"
+tenant_id       = "11111111-1111-1111-1111-111111111111"
+
+environment_code = "dev"
+location         = "eastus"
+workload_name    = "apisix"
+identifier       = ""
+
+log_retention_days        = 30
+app_insights_daily_cap_gb = 10
+public_network_access_enabled = true
+enable_dashboard = false
+
+tags = {
+  owner       = "platform-team"
+  environment = "dev"
+  cost_center = "shared-services"
+}

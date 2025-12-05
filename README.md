@@ -1,3 +1,5 @@
+![API Management for GenAl workloads Secure, scalable, and efficient gateway for Al models.](docs/banner.png)
+
 # APISIX Azure GenAI Accelerator
 
 Tired of HTTP **429** throttling turning your agentic apps and coding agents with “try again later”? This repo gives you a fast, **drop-in APISIX GenAI gateway for Azure** that sits in front of **multiple Azure OpenAI backends** and **fails over automatically on 429/5xx** (within the same request), routing traffic to wherever capacity exists.
@@ -68,13 +70,14 @@ az account set --subscription <YOUR_SUBSCRIPTION_ID>
 
 ---
 
-### 2) Deploy platform prerequisites (state + shared platform)
+### 2) Deploy platform prerequisites (state + observability + shared platform)
 
-These two commands create the remote state storage, ACR, and Key Vault used by the rest of the deployment:
+These commands create remote state storage, shared observability (Log Analytics, Azure Monitor workspace, Application Insights), ACR, and Key Vault used by the rest of the deployment:
 
 ```bash
-uv run deploy-bootstrap "$ENV"
-uv run deploy-platform  "$ENV"
+uv run deploy-bootstrap      "$ENV"   # terraform backend storage
+uv run deploy-observability  "$ENV"   # shared Log Analytics / Azure Monitor / App Insights
+uv run deploy-platform       "$ENV"   # ACR, Key Vault, identities
 ```
 
 ---
@@ -114,6 +117,14 @@ This command:
 
 ```bash
 uv run deploy-workload "$ENV"
+```
+
+### (Optional) Provision Azure AI Foundry / Azure OpenAI
+
+If you want Terraform to stand up Azure AI Foundry/OpenAI resources instead of bringing your own endpoints, run:
+
+```bash
+uv run deploy-foundry "$ENV"
 ```
 
 ---

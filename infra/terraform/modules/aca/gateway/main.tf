@@ -39,7 +39,9 @@ locals {
     managed_by  = "terraform"
   }, var.tags)
 
-  app_insights_connection_string = azurerm_application_insights.this.connection_string
+  app_insights_connection_string = (
+    var.app_insights_connection_string != "" ? var.app_insights_connection_string : azurerm_application_insights.this[0].connection_string
+  )
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -47,8 +49,8 @@ locals {
 # ─────────────────────────────────────────────────────────────────────────────
 
 module "naming" {
-  source        = "Azure/naming/azurerm"
-  version       = "0.4.2"
+  source  = "Azure/naming/azurerm"
+  version = "0.4.2"
   # Role last: workload-env-region-role
   suffix        = compact([local.workload_code, local.env_code, local.region, "gateway", local.identifier_code == "" ? null : local.identifier_code])
   unique-length = 6
@@ -83,6 +85,8 @@ resource "azurerm_role_assignment" "gateway_azure_monitor_reader" {
 # ─────────────────────────────────────────────────────────────────────────────
 
 resource "azurerm_application_insights" "this" {
+  count = var.app_insights_connection_string == "" ? 1 : 0
+
   name                 = module.naming.application_insights.name_unique
   location             = local.location_canonical
   resource_group_name  = var.rg_name
@@ -110,10 +114,12 @@ locals {
   # Final configuration combines non-secret app settings with direct env vars
   app_setting_env_vars = merge(local.kv_app_settings, local.direct_env_vars)
 
-  container_identity_ids = toset([
-    azurerm_user_assigned_identity.gateway.id,
-    var.key_vault_managed_identity_id,
-  ])
+  container_identity_ids = toset(
+    compact([
+      azurerm_user_assigned_identity.gateway.id,
+      var.key_vault_managed_identity_id,
+    ])
+  )
 
   # Azure Monitor configuration for OTel collector (always enabled)
   azure_monitor_config = {
@@ -261,8 +267,8 @@ resource "azurerm_container_app" "gateway" {
     container {
       name   = "otel-collector"
       image  = var.otel_collector_image
-      cpu    = 0.25
-      memory = "0.5Gi"
+      cpu    = var.otel_collector_cpu
+      memory = var.otel_collector_memory
 
       # Use rendered config from shared volume
       args = ["--config=/shared-configs/otel-collector/config.yaml"]

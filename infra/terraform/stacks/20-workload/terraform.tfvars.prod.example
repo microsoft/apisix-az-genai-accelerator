@@ -17,7 +17,7 @@ state_resource_group_name  = "rg-terraform-state"
 state_storage_account_name = "stterraformstate123"
 state_container_name       = "tfstate"
 foundation_state_blob_key  = "prod/10-platform.tfstate"
-openai_state_blob_key      = "prod/15-openai.tfstate"
+openai_state_blob_key      = "prod/15-foundry.tfstate"
 
 app_settings = {
   APISIX_LOG_LEVEL         = "warn"
@@ -46,6 +46,9 @@ gateway_cpu           = 2.0
 gateway_memory        = "4Gi"
 gateway_min_replicas  = 2
 gateway_max_replicas  = 10
+
+otel_collector_cpu    = 0.25
+otel_collector_memory = "0.5Gi"
 
 log_analytics_workspace_id   = ""
 log_retention_days           = 60

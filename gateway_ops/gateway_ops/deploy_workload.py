@@ -11,13 +11,14 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from gateway_ops._utils import ensure
+from gateway_ops._utils import ensure, run_logged
 
 from ._deploy_common import (
     AzureContext,
     BootstrapState,
     FoundationState,
-    OpenAIState,
+    FoundryState,
+    ObservabilityState,
     Paths,
     azure_context,
     configure_logging,
@@ -25,12 +26,14 @@ from ._deploy_common import (
     export_foundation_tf_env,
     load_bootstrap_state,
     load_foundation_state,
+    load_observability_state,
     read_env,
     resolve_paths,
     state_key,
     terraform_apply,
     terraform_init_remote,
     terraform_output,
+    update_tfvars,
 )
 
 logger = logging.getLogger(__name__)
@@ -42,7 +45,8 @@ def deploy_workload(
     ctx: AzureContext | None = None,
     bootstrap_state: BootstrapState | None = None,
     foundation_state: FoundationState | None = None,
-    openai_state: OpenAIState | None = None,
+    openai_state: FoundryState | None = None,
+    observability_state: ObservabilityState | None = None,
     deploy_e2e: bool = False,
     no_image_build: bool = False,
     local_docker: bool = False,
@@ -62,11 +66,83 @@ def deploy_workload(
         if foundation_state is not None
         else load_foundation_state(env, paths, context, bootstrap)
     )
+    observability = (
+        observability_state
+        if observability_state is not None
+        else load_observability_state(env, paths, context, bootstrap)
+    )
     tfvars_file = ensure_tfvars(
         paths.workload, env, context.subscription_id, context.tenant_id
     )
+    update_tfvars(
+        tfvars_file,
+        {
+            "state_resource_group_name": bootstrap.resource_group,
+            "state_storage_account_name": bootstrap.storage_account,
+            "state_container_name": bootstrap.container,
+            "remote_state_resource_group_name": bootstrap.resource_group,
+            "remote_state_storage_account_name": bootstrap.storage_account,
+            "remote_state_container_name": bootstrap.container,
+            "foundation_state_blob_key": state_key(
+                bootstrap.state_prefix, "10-platform"
+            ),
+            "openai_state_blob_key": state_key(bootstrap.state_prefix, "15-foundry"),
+            # observability handoff
+            "log_analytics_workspace_id": observability.log_analytics_workspace_id,
+            "azure_monitor_workspace_id": observability.azure_monitor_workspace_id,
+            "azure_monitor_prometheus_endpoint": observability.azure_monitor_prometheus_remote_write_endpoint,
+            "azure_monitor_prometheus_query_endpoint": observability.azure_monitor_prometheus_query_endpoint,
+            "azure_monitor_prometheus_dcr_id": observability.azure_monitor_prometheus_dcr_id,
+            "gateway_log_ingest_dce_id": observability.gateway_logs_dce_id or "",
+            "gateway_log_ingest_dcr_id": observability.gateway_logs_dcr_id or "",
+            "gateway_log_ingest_uri": observability.gateway_logs_ingest_uri or "",
+            "gateway_log_stream_name": observability.gateway_logs_stream_name or "",
+            "gateway_log_table_name": observability.gateway_logs_table_name or "",
+            # ensure secrets list is valid (derive from secret_keys otherwise)
+            "secret_names": [],
+            # platform handoff (ensure current values)
+            "key_vault_name": foundation.key_vault_name,
+            "aca_managed_identity_id": foundation.aca_identity_id,
+            "platform_resource_group_name": foundation.platform_resource_group,
+            "platform_acr_name": foundation.acr_name,
+        },
+    )
 
     export_foundation_tf_env(env, context, bootstrap, foundation)
+    os.environ["TF_VAR_log_analytics_workspace_id"] = (
+        observability.log_analytics_workspace_id
+    )
+    os.environ["TF_VAR_azure_monitor_workspace_id"] = (
+        observability.azure_monitor_workspace_id
+    )
+    os.environ["TF_VAR_azure_monitor_prometheus_endpoint"] = (
+        observability.azure_monitor_prometheus_remote_write_endpoint
+    )
+    os.environ["TF_VAR_azure_monitor_prometheus_query_endpoint"] = (
+        observability.azure_monitor_prometheus_query_endpoint
+    )
+    os.environ["TF_VAR_azure_monitor_prometheus_dcr_id"] = (
+        observability.azure_monitor_prometheus_dcr_id
+    )
+    os.environ["TF_VAR_gateway_log_ingest_dce_id"] = (
+        observability.gateway_logs_dce_id or ""
+    )
+    os.environ["TF_VAR_gateway_log_ingest_dcr_id"] = (
+        observability.gateway_logs_dcr_id or ""
+    )
+    os.environ["TF_VAR_gateway_log_ingest_uri"] = (
+        observability.gateway_logs_ingest_uri or ""
+    )
+    os.environ["TF_VAR_gateway_log_stream_name"] = (
+        observability.gateway_logs_stream_name or ""
+    )
+    os.environ["TF_VAR_gateway_log_table_name"] = (
+        observability.gateway_logs_table_name or ""
+    )
+    if observability.app_insights_connection_string != "":
+        os.environ["TF_VAR_app_insights_connection_string"] = (
+            observability.app_insights_connection_string
+        )
 
     openai_info = (
         openai_state
@@ -89,6 +165,15 @@ def deploy_workload(
         os.environ.pop("TF_VAR_openai_state_blob_key", None)
 
     _sync_environment(env, foundation.key_vault_name, openai_info.provisioned)
+
+    # Ensure tfvars reflect latest platform outputs (especially ACR name/RG)
+    update_tfvars(
+        tfvars_file,
+        {
+            "platform_resource_group_name": foundation.platform_resource_group,
+            "platform_acr_name": foundation.acr_name,
+        },
+    )
 
     images = (
         _images_from_tfvars(tfvars_file, deploy_e2e)
@@ -130,30 +215,30 @@ def _detect_openai_state(
     paths: Paths,
     *,
     skip_openai: bool,
-) -> OpenAIState:
-    if skip_openai or not paths.openai.exists():
+) -> FoundryState:
+    if skip_openai or not paths.foundry.exists():
         logger.info("Treating Azure OpenAI as disabled for workload deployment")
-        return OpenAIState(provisioned=False, state_blob_key=None)
+        return FoundryState(provisioned=False, state_blob_key=None)
 
     export_foundation_tf_env(env, ctx, bootstrap, foundation)
-    openai_state_key = state_key(bootstrap.state_prefix, "15-openai")
+    openai_state_key = state_key(bootstrap.state_prefix, "15-foundry")
     try:
         terraform_init_remote(
-            paths.openai,
+            paths.foundry,
             tenant_id=ctx.tenant_id,
             state_rg=bootstrap.resource_group,
             state_sa=bootstrap.storage_account,
             state_container=bootstrap.container,
             state_key=openai_state_key,
         )
-        terraform_output(paths.openai)
+        terraform_output(paths.foundry)
     except subprocess.CalledProcessError:
         logger.info(
             "Azure OpenAI state not found; continuing without provisioned OpenAI"
         )
-        return OpenAIState(provisioned=False, state_blob_key=None)
+        return FoundryState(provisioned=False, state_blob_key=None)
 
-    return OpenAIState(provisioned=True, state_blob_key=openai_state_key)
+    return FoundryState(provisioned=True, state_blob_key=openai_state_key)
 
 
 def _sync_environment(env: str, key_vault: str, use_provisioned_openai: bool) -> None:
@@ -165,7 +250,7 @@ def _sync_environment(env: str, key_vault: str, use_provisioned_openai: bool) ->
         sync_cmd.extend(["--identifier", identifier])
     if use_provisioned_openai:
         sync_cmd.append("--use-provisioned-openai")
-    subprocess.run(sync_cmd, text=True, check=True)
+    run_logged(sync_cmd, capture_output=False)
 
 
 def _configure_e2e(images: dict[str, str]) -> None:
@@ -195,11 +280,11 @@ def _build_images(deploy_e2e: bool, local_docker: bool) -> dict[str, str]:
         full_cmd = ["uv", "run", *command]
         if local_docker:
             full_cmd.append("--local-docker")
-        result = subprocess.run(full_cmd, text=True, capture_output=True, check=True)
-        if result.stdout:
-            sys.stdout.write(result.stdout)
-        if result.stderr:
-            sys.stderr.write(result.stderr)
+        result = run_logged(full_cmd, capture_output=True, check=False)
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"Image build failed for {' '.join(command)} (exit {result.returncode})"
+            )
         image = _last_non_empty_line(result.stdout)
         if image == "":
             raise RuntimeError(f"Failed to parse image from build output: {full_cmd}")

@@ -17,7 +17,7 @@ state_resource_group_name  = "rg-terraform-state"
 state_storage_account_name = "stterraformstate123"
 state_container_name       = "tfstate"
 foundation_state_blob_key  = "dev/10-platform.tfstate"
-openai_state_blob_key      = "dev/15-openai.tfstate"
+openai_state_blob_key      = "dev/15-foundry.tfstate"
 
 app_settings = {
   APISIX_LOG_LEVEL        = "info"
@@ -47,7 +47,14 @@ gateway_memory        = "2Gi"
 gateway_min_replicas  = 1
 gateway_max_replicas  = 3
 
+otel_collector_cpu    = 0.25
+otel_collector_memory = "0.5Gi"
+
 log_analytics_workspace_id   = ""
+azure_monitor_workspace_id   = ""
+azure_monitor_prometheus_endpoint = ""
+azure_monitor_prometheus_query_endpoint = ""
+azure_monitor_prometheus_dcr_id = ""
 log_retention_days           = 30
 app_insights_connection_string = "InstrumentationKey=...;IngestionEndpoint=https://..."
 

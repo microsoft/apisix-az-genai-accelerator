@@ -4,23 +4,23 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "~> 4.27" # Compatible with enterprise pattern
+      version = ">= 4.55.0, < 5.0"
     }
     azuread = {
       source  = "hashicorp/azuread"
-      version = "~> 3.3"
+      version = "~> 3.7"
     }
     azapi = {
       source  = "azure/azapi"
-      version = "~> 2.0"
+      version = "~> 2.5"
     }
     random = {
       source  = "hashicorp/random"
-      version = "~> 3.6"
+      version = ">= 3.7.0, < 4.0"
     }
     time = {
       source  = "hashicorp/time"
-      version = "~> 0.10"
+      version = "~> 0.11"
     }
   }
 }

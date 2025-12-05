@@ -6,6 +6,8 @@ requires-python = ">=3.13"
 dependencies = [
     "pytfvars>=1.0.3",
     "python-hcl2>=7.3.1",
+    "tenacity>=8.2,<9",
+    "deepdiff>=6.7",
 ]
 
 [build-system]

@@ -90,11 +90,11 @@ locals {
   ))
 
   apim_gateway_logs_env = {
-    APIM_GATEWAY_LOGS_INGEST_URI = module.apim_gateway_logs.ingest_uri
-    APIM_GATEWAY_LOGS_STREAM     = module.apim_gateway_logs.stream_name
+    APIM_GATEWAY_LOGS_INGEST_URI = var.gateway_log_ingest_uri
+    APIM_GATEWAY_LOGS_STREAM     = var.gateway_log_stream_name
   }
 
-  final_direct_env_vars = var.gateway_e2e_test_mode ? merge(var.direct_environment_variables, local.apim_gateway_logs_env, {
+  final_direct_env_vars = var.gateway_e2e_test_mode && var.gateway_log_ingest_uri != "" ? merge(var.direct_environment_variables, local.apim_gateway_logs_env, {
     GATEWAY_E2E_TEST_MODE = "true"
   }) : var.direct_environment_variables
 }
@@ -154,6 +154,7 @@ module "env" {
 # ─────────────────────────────────────────────────────────────────────────────
 
 module "azure_monitor_workspace" {
+  count  = var.azure_monitor_workspace_id == "" ? 1 : 0
   source = "../../modules/azure-monitor/workspace"
 
   subscription_id  = data.azurerm_client_config.current.subscription_id
@@ -165,31 +166,27 @@ module "azure_monitor_workspace" {
   tags             = local.common_tags
 }
 
+locals {
+  azure_monitor_workspace_id              = var.azure_monitor_workspace_id != "" ? var.azure_monitor_workspace_id : module.azure_monitor_workspace[0].workspace_id
+  azure_monitor_prometheus_endpoint       = var.azure_monitor_prometheus_endpoint != "" ? var.azure_monitor_prometheus_endpoint : module.azure_monitor_workspace[0].prometheus_remote_write_endpoint
+  azure_monitor_prometheus_query_endpoint = var.azure_monitor_prometheus_query_endpoint != "" ? var.azure_monitor_prometheus_query_endpoint : module.azure_monitor_workspace[0].prometheus_query_endpoint
+  azure_monitor_prometheus_dcr_id         = var.azure_monitor_prometheus_dcr_id != "" ? var.azure_monitor_prometheus_dcr_id : module.azure_monitor_workspace[0].prometheus_data_collection_rule_id
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # APIM-style Gateway Logs (DCE + DCR for logs ingestion)
 # ─────────────────────────────────────────────────────────────────────────────
 
-module "apim_gateway_logs" {
-  source = "../../modules/azure-monitor/apim-gateway-logs"
-
-  workspace_id        = module.env.law_id
-  location            = var.location
-  resource_group_name = module.env.rg_name
-  stream_name         = "Custom-APISIXGatewayLogs"
-  custom_table_name   = "APISIXGatewayLogs_CL"
-  dcr_name            = "dcr-apim-gw-logs-v3"
-  tags                = local.common_tags
-}
-
 # Role assignment to grant gateway identity monitoring reader access
 resource "azurerm_role_assignment" "gateway_monitoring_reader" {
-  scope                = module.azure_monitor_workspace.workspace_id
+  scope                = local.azure_monitor_workspace_id
   role_definition_name = "Monitoring Reader"
   principal_id         = module.gateway.gateway_identity_principal_id
 }
 
 resource "azurerm_role_assignment" "gateway_prometheus_publisher" {
-  scope                = module.azure_monitor_workspace.prometheus_data_collection_rule_id
+  count                = var.azure_monitor_prometheus_dcr_id == "" ? 0 : 1
+  scope                = var.azure_monitor_prometheus_dcr_id
   role_definition_name = "Monitoring Metrics Publisher"
   principal_id         = module.gateway.gateway_identity_principal_id
 }
@@ -203,21 +200,24 @@ resource "azurerm_role_assignment" "gateway_logs_ingest" {
 
 # Grant gateway identity permission to publish via the DCR/DCE ingestion pipeline
 resource "azurerm_role_assignment" "gateway_logs_metrics_publisher" {
-  scope                = module.apim_gateway_logs.dcr_id
+  count                = var.gateway_log_ingest_dcr_id != "" ? 1 : 0
+  scope                = var.gateway_log_ingest_dcr_id
   role_definition_name = "Monitoring Metrics Publisher"
   principal_id         = module.gateway.gateway_identity_principal_id
 }
 
 # Allow gateway identity to publish to the DCE endpoint directly
 resource "azurerm_role_assignment" "gateway_logs_dce_metrics_publisher" {
-  scope                = module.apim_gateway_logs.dce_id
+  count                = var.gateway_log_ingest_dce_id != "" ? 1 : 0
+  scope                = var.gateway_log_ingest_dce_id
   role_definition_name = "Monitoring Metrics Publisher"
   principal_id         = module.gateway.gateway_identity_principal_id
 }
 
 # Broader DCR permissions for log ingestion (covers data collection rule operations)
 resource "azurerm_role_assignment" "gateway_logs_dcr_contributor" {
-  scope                = module.apim_gateway_logs.dcr_id
+  count                = var.gateway_log_ingest_dcr_id != "" ? 1 : 0
+  scope                = var.gateway_log_ingest_dcr_id
   role_definition_name = "Monitoring Contributor"
   principal_id         = module.gateway.gateway_identity_principal_id
 }
@@ -275,12 +275,15 @@ module "gateway" {
   # Observability
   log_analytics_workspace_id        = module.env.law_id
   app_insights_daily_cap_gb         = var.app_insights_daily_cap_gb
-  azure_monitor_workspace_id        = module.azure_monitor_workspace.workspace_id
-  azure_monitor_prometheus_endpoint = module.azure_monitor_workspace.prometheus_remote_write_endpoint
+  app_insights_connection_string    = var.app_insights_connection_string
+  azure_monitor_workspace_id        = local.azure_monitor_workspace_id
+  azure_monitor_prometheus_endpoint = local.azure_monitor_prometheus_endpoint
   tenant_id                         = data.azurerm_client_config.current.tenant_id
 
   # Observability sidecars
-  otel_collector_image = var.otel_collector_image
+  otel_collector_image   = var.otel_collector_image
+  otel_collector_cpu     = var.otel_collector_cpu
+  otel_collector_memory  = var.otel_collector_memory
 
   tags = local.common_tags
 }

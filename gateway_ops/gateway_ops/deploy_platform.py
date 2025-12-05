@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 
 from gateway_ops._utils import ensure
 
@@ -9,17 +10,20 @@ from ._deploy_common import (
     AzureContext,
     BootstrapState,
     FoundationState,
+    ObservabilityState,
     azure_context,
     configure_logging,
     ensure_tfvars,
     export_core_tf_env,
     foundation_state_from_outputs,
     load_bootstrap_state,
+    load_observability_state,
     resolve_paths,
     state_key,
     terraform_apply,
     terraform_init_remote,
     terraform_output,
+    update_tfvars,
 )
 
 logger = logging.getLogger(__name__)
@@ -30,6 +34,7 @@ def deploy_platform(
     *,
     ctx: AzureContext | None = None,
     bootstrap_state: BootstrapState | None = None,
+    observability_state: ObservabilityState | None = None,
 ) -> FoundationState:
     ensure(["az", "terraform"])
     context = ctx if ctx is not None else azure_context()
@@ -39,12 +44,26 @@ def deploy_platform(
         if bootstrap_state is not None
         else load_bootstrap_state(env, paths, context)
     )
+    observability = (
+        observability_state
+        if observability_state is not None
+        else load_observability_state(env, paths, context, bootstrap)
+    )
 
     tfvars_file = ensure_tfvars(
         paths.foundation, env, context.subscription_id, context.tenant_id
     )
+    update_tfvars(
+        tfvars_file,
+        {
+            "log_analytics_workspace_id": observability.log_analytics_workspace_id,
+        },
+    )
 
     export_core_tf_env(env, context)
+    os.environ["TF_VAR_log_analytics_workspace_id"] = (
+        observability.log_analytics_workspace_id
+    )
 
     logger.info("==> 10-platform")
     terraform_init_remote(

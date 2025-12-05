@@ -27,7 +27,7 @@ state_resource_group_name  = "rg-terraform-state"
 state_storage_account_name = "stterraformstate123"
 state_container_name       = "tfstate"
 foundation_state_blob_key  = "dev/10-platform.tfstate"
-openai_state_blob_key      = "dev/15-openai.tfstate"
+openai_state_blob_key      = "dev/15-foundry.tfstate"
 
 # Non-secret application settings injected into the gateway
 app_settings = {
@@ -55,6 +55,10 @@ gateway_cpu           = 1.0
 gateway_memory        = "2Gi"
 gateway_min_replicas  = 1
 gateway_max_replicas  = 3
+
+# Observability sidecar sizing
+otel_collector_cpu    = 0.25
+otel_collector_memory = "0.5Gi"
 
 # Observability
 log_analytics_workspace_id = ""

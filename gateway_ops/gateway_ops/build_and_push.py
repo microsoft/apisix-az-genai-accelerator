@@ -3,14 +3,13 @@ from __future__ import annotations
 import json
 import os
 import re
-import subprocess
 import tempfile
 from contextlib import contextmanager
 from pathlib import Path
 from shutil import copy2, copytree
 from typing import Iterable, Iterator
 
-from ._utils import derive_image_tag, ensure, repo_root
+from ._utils import derive_image_tag, ensure, repo_root, run_logged
 
 
 def build_and_push(
@@ -77,11 +76,9 @@ def build_and_push(
 
 
 def _terraform_outputs(stack_dir: Path) -> dict:
-    result = subprocess.run(
+    result = run_logged(
         ["terraform", f"-chdir={stack_dir}", "output", "-json"],
-        text=True,
         capture_output=True,
-        check=True,
     )
     return json.loads(result.stdout)
 
@@ -97,11 +94,11 @@ def _registry_name_from_login_server(login_server: str) -> str:
 
 
 def _acr_docker_login(registry: str) -> None:
-    subprocess.run(["az", "acr", "login", "--name", registry], text=True, check=True)
+    run_logged(["az", "acr", "login", "--name", registry])
 
 
 def _docker_build_and_push(image: str, dockerfile: Path, context_dir: Path) -> None:
-    subprocess.run(
+    run_logged(
         [
             "docker",
             "build",
@@ -113,10 +110,9 @@ def _docker_build_and_push(image: str, dockerfile: Path, context_dir: Path) -> N
             str(dockerfile),
             str(context_dir),
         ],
-        text=True,
-        check=True,
+        capture_output=False,
     )
-    subprocess.run(["docker", "push", image], text=True, check=True)
+    run_logged(["docker", "push", image], capture_output=False)
 
 
 def _acr_run_build(
@@ -129,7 +125,7 @@ def _acr_run_build(
     workdir: Path,
 ) -> None:
     template_path = template.relative_to(workdir)
-    subprocess.run(
+    run_logged(
         [
             "az",
             "acr",
@@ -148,8 +144,7 @@ def _acr_run_build(
             f"context={build_context.as_posix()}",
             str(workdir),
         ],
-        text=True,
-        check=True,
+        capture_output=True,
     )
 
 

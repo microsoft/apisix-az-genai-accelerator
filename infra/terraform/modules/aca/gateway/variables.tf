@@ -231,6 +231,13 @@ variable "app_insights_daily_cap_gb" {
   default     = 10
 }
 
+variable "app_insights_connection_string" {
+  description = "Existing Application Insights connection string (skips creation when provided)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 variable "azure_monitor_workspace_id" {
   description = "Azure Monitor workspace ID for Prometheus metrics"
   type        = string
@@ -257,6 +264,18 @@ variable "otel_collector_image" {
   description = "OTel Collector container image"
   type        = string
   default     = "otel/opentelemetry-collector-contrib:0.138.0"
+}
+
+variable "otel_collector_cpu" {
+  description = "CPU cores for OTel Collector sidecar"
+  type        = number
+  default     = 0.25
+}
+
+variable "otel_collector_memory" {
+  description = "Memory for OTel Collector sidecar"
+  type        = string
+  default     = "0.5Gi"
 }
 
 # ─────────────────────────────────────────────────────────────────────────────

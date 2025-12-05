@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Any
 
 import hcl2
-from pytfvars import tfvars
 
 from ._utils import repo_root
 
@@ -27,9 +26,10 @@ class AzureContext:
 class Paths:
     root: Path
     stacks: Path
+    observability: Path
     bootstrap: Path
     foundation: Path
-    openai: Path
+    foundry: Path
     workload: Path
     config_dir: Path
     toolkit_root: Path
@@ -53,7 +53,25 @@ class FoundationState:
 
 
 @dataclass(frozen=True)
-class OpenAIState:
+class ObservabilityState:
+    location: str
+    resource_group: str
+    log_analytics_workspace_id: str
+    app_insights_connection_string: str
+    app_insights_instrumentation_key: str
+    azure_monitor_workspace_id: str
+    azure_monitor_prometheus_remote_write_endpoint: str
+    azure_monitor_prometheus_query_endpoint: str
+    azure_monitor_prometheus_dcr_id: str
+    gateway_logs_dce_id: str | None
+    gateway_logs_dcr_id: str | None
+    gateway_logs_ingest_uri: str | None
+    gateway_logs_stream_name: str | None
+    gateway_logs_table_name: str | None
+
+
+@dataclass(frozen=True)
+class FoundryState:
     provisioned: bool
     state_blob_key: str | None
 
@@ -62,15 +80,31 @@ def configure_logging() -> None:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 
+def _run(cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+    """
+    Wrapper around subprocess.run that always surfaces stdout/stderr when a command fails.
+    """
+    kwargs.setdefault("text", True)
+    try:
+        return subprocess.run(cmd, check=True, **kwargs)
+    except subprocess.CalledProcessError as exc:
+        if exc.stdout:
+            sys.stdout.write(exc.stdout)
+        if exc.stderr:
+            sys.stderr.write(exc.stderr)
+        raise
+
+
 def resolve_paths() -> Paths:
     root = repo_root()
     stacks = root / "infra" / "terraform" / "stacks"
     return Paths(
         root=root,
         stacks=stacks,
+        observability=stacks / "05-observability",
         bootstrap=stacks / "00-bootstrap",
         foundation=stacks / "10-platform",
-        openai=stacks / "15-openai",
+        foundry=stacks / "15-foundry",
         workload=stacks / "20-workload",
         config_dir=root / "config",
         toolkit_root=root / "apim-genai-gateway-toolkit" / "infra",
@@ -95,6 +129,62 @@ def load_tfvars(tfvars_path: Path) -> dict[str, Any]:
     return data
 
 
+def _format_value(value: Any, indent: int = 0) -> str:
+    pad = "  " * indent
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (int, float)):
+        return repr(value)
+    if isinstance(value, str):
+        return json.dumps(value)
+    if isinstance(value, list):
+        inner = ", ".join(_format_value(item, indent) for item in value)
+        return f"[{inner}]"
+    if isinstance(value, dict):
+        lines = ["{"]  # opening brace
+        for key, val in value.items():
+            lines.append(f"{pad}  {key} = {_format_value(val, indent + 1)}")
+        lines.append(f"{pad}}}")
+        return "\n".join(lines)
+    return json.dumps(value)
+
+
+def _render_tfvars_local(data: dict[str, Any]) -> str:
+    lines = []
+    for key, value in data.items():
+        lines.append(f"{key} = {_format_value(value)}")
+    return "\n".join(lines) + "\n"
+
+
+def _log_tfvars_diff(
+    tfvars_path: Path, before: dict[str, Any] | None, after: dict[str, Any]
+) -> None:
+    if before is None:
+        return
+    try:
+        from deepdiff import DeepDiff
+    except ImportError:
+        logger.debug("DeepDiff not installed; skipping tfvars diff for %s", tfvars_path)
+        return
+    diff = DeepDiff(before, after, ignore_order=True)
+    if diff:
+        logger.info("Updated tfvars %s: %s", tfvars_path.name, diff.to_json())
+
+
+def _write_tfvars(tfvars_path: Path, data: dict[str, Any]) -> None:
+    if tfvars_path.exists():
+        try:
+            before = load_tfvars(tfvars_path)
+        except Exception:
+            before = None
+    else:
+        before = None
+
+    rendered = _render_tfvars_local(data)
+    tfvars_path.write_text(rendered)
+    _log_tfvars_diff(tfvars_path, before, data)
+
+
 def set_tfvars(
     tfvars_path: Path, subscription_id: str, tenant_id: str, env: str
 ) -> None:
@@ -102,48 +192,70 @@ def set_tfvars(
     data["subscription_id"] = subscription_id
     data["tenant_id"] = tenant_id
     data["environment_code"] = env
+    _write_tfvars(tfvars_path, data)
 
-    rendered = tfvars.convert(data)
-    tfvars_path.write_text(f"{rendered}\n")
+
+def update_tfvars(tfvars_path: Path, updates: dict[str, Any]) -> None:
+    data = load_tfvars(tfvars_path)
+    for key, value in updates.items():
+        if value is None:
+            continue
+        data[key] = value
+    _write_tfvars(tfvars_path, data)
 
 
 def ensure_tfvars(
     stack_dir: Path, env: str, subscription_id: str, tenant_id: str
 ) -> Path:
     target = stack_dir / f"{env}.tfvars"
-    if target.exists():
-        return target
-
     candidates = [
         stack_dir / f"terraform.tfvars.{env}.example",
         stack_dir / f"{env}.tfvars.example",
         stack_dir / "terraform.tfvars.example",
     ]
-
     example = next((path for path in candidates if path.exists()), None)
-    if example is None:
-        raise FileNotFoundError(
-            f"No tfvars present for env '{env}' and no example tfvars found in {stack_dir}"
-        )
 
-    target.write_text(example.read_text())
-    set_tfvars(target, subscription_id, tenant_id, env)
-    logger.info("Seeded tfvars: %s (from %s)", target, example.name)
+    if not target.exists():
+        if example is None:
+            raise FileNotFoundError(
+                f"No tfvars present for env '{env}' and no example tfvars found in {stack_dir}"
+            )
+        target.write_text(example.read_text())
+        logger.info("Seeded tfvars: %s (from %s)", target, example.name)
+        base_data = load_tfvars(target)
+    else:
+        try:
+            current_data = load_tfvars(target)
+        except Exception as exc:  # hcl parse error fallback
+            logger.warning(
+                "Failed to parse existing tfvars %s (%s); regenerating from example",
+                target.name,
+                exc,
+            )
+            current_data = {}
+        if example is not None:
+            # Backfill any missing keys from the example without overwriting existing values.
+            base_data = load_tfvars(example)
+            base_data.update(current_data)
+        else:
+            base_data = current_data
+
+    base_data["subscription_id"] = subscription_id
+    base_data["tenant_id"] = tenant_id
+    base_data["environment_code"] = env
+
+    _write_tfvars(target, base_data)
     return target
 
 
 def azure_context() -> AzureContext:
-    subscription_id = subprocess.run(
+    subscription_id = _run(
         ["az", "account", "show", "--query", "id", "-o", "tsv"],
-        text=True,
         capture_output=True,
-        check=True,
     ).stdout.strip()
-    tenant_id = subprocess.run(
+    tenant_id = _run(
         ["az", "account", "show", "--query", "tenantId", "-o", "tsv"],
-        text=True,
         capture_output=True,
-        check=True,
     ).stdout.strip()
     return AzureContext(subscription_id=subscription_id, tenant_id=tenant_id)
 
@@ -152,6 +264,8 @@ def export_core_tf_env(env: str, ctx: AzureContext) -> None:
     os.environ["TF_VAR_subscription_id"] = ctx.subscription_id
     os.environ["TF_VAR_tenant_id"] = ctx.tenant_id
     os.environ["TF_VAR_environment_code"] = env
+    os.environ["ARM_SUBSCRIPTION_ID"] = ctx.subscription_id
+    os.environ["ARM_TENANT_ID"] = ctx.tenant_id
 
 
 def export_foundation_tf_env(
@@ -178,7 +292,7 @@ def export_foundation_tf_env(
 
 def terraform_init_local(stack_dir: Path, state_path: Path) -> None:
     state_path.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(
+    _run(
         [
             "terraform",
             f"-chdir={stack_dir}",
@@ -186,8 +300,6 @@ def terraform_init_local(stack_dir: Path, state_path: Path) -> None:
             "-reconfigure",
             f"-backend-config=path={state_path}",
         ],
-        text=True,
-        check=True,
     )
 
 
@@ -200,7 +312,7 @@ def terraform_init_remote(
     state_container: str,
     state_key: str,
 ) -> None:
-    subprocess.run(
+    _run(
         [
             "terraform",
             f"-chdir={stack_dir}",
@@ -213,15 +325,13 @@ def terraform_init_remote(
             f"-backend-config=container_name={state_container}",
             f"-backend-config=key={state_key}",
         ],
-        text=True,
-        check=True,
         stdout=sys.stdout,
         stderr=sys.stderr,
     )
 
 
 def terraform_apply(stack_dir: Path, tfvars_file: Path) -> None:
-    subprocess.run(
+    _run(
         [
             "terraform",
             f"-chdir={stack_dir}",
@@ -229,19 +339,15 @@ def terraform_apply(stack_dir: Path, tfvars_file: Path) -> None:
             "-auto-approve",
             f"-var-file={tfvars_file.name}",
         ],
-        text=True,
-        check=True,
         stdout=sys.stdout,
         stderr=sys.stderr,
     )
 
 
 def terraform_output(stack_dir: Path) -> dict[str, Any]:
-    output = subprocess.run(
+    output = _run(
         ["terraform", f"-chdir={stack_dir}", "output", "-json"],
-        text=True,
         capture_output=True,
-        check=True,
     ).stdout
     return json.loads(output)
 
@@ -254,7 +360,12 @@ def state_prefix_from_blob(blob_key: str) -> str:
 
 
 def state_key(prefix: str, filename: str) -> str:
-    return f"{prefix}/{filename}.tfstate"
+    normalized_prefix = prefix.rstrip("/")
+    return (
+        f"{normalized_prefix}/{filename}.tfstate"
+        if normalized_prefix
+        else f"{filename}.tfstate"
+    )
 
 
 def bootstrap_state_from_outputs(outputs: dict[str, Any]) -> BootstrapState:
@@ -282,6 +393,39 @@ def foundation_state_from_outputs(outputs: dict[str, Any]) -> FoundationState:
     )
 
 
+def observability_state_from_outputs(outputs: dict[str, Any]) -> ObservabilityState:
+    return ObservabilityState(
+        location=_required_output(outputs, "location"),
+        resource_group=_required_output(outputs, "observability_rg_name"),
+        log_analytics_workspace_id=_required_output(
+            outputs, "log_analytics_workspace_id"
+        ),
+        app_insights_connection_string=_optional_output(
+            outputs, "app_insights_connection_string"
+        ),
+        app_insights_instrumentation_key=_optional_output(
+            outputs, "app_insights_instrumentation_key"
+        ),
+        azure_monitor_workspace_id=_required_output(
+            outputs, "azure_monitor_workspace_id"
+        ),
+        azure_monitor_prometheus_remote_write_endpoint=_optional_output(
+            outputs, "azure_monitor_prometheus_remote_write_endpoint"
+        ),
+        azure_monitor_prometheus_query_endpoint=_optional_output(
+            outputs, "azure_monitor_prometheus_query_endpoint"
+        ),
+        azure_monitor_prometheus_dcr_id=_optional_output(
+            outputs, "azure_monitor_prometheus_dcr_id"
+        ),
+        gateway_logs_dce_id=_optional_output(outputs, "gateway_logs_dce_id"),
+        gateway_logs_dcr_id=_optional_output(outputs, "gateway_logs_dcr_id"),
+        gateway_logs_ingest_uri=_optional_output(outputs, "gateway_logs_ingest_uri"),
+        gateway_logs_stream_name=_optional_output(outputs, "gateway_logs_stream_name"),
+        gateway_logs_table_name=_optional_output(outputs, "gateway_logs_table_name"),
+    )
+
+
 def _required_output(outputs: dict[str, Any], key: str) -> str:
     value = outputs.get(key, {}).get("value")
     if value is None:
@@ -306,6 +450,22 @@ def load_bootstrap_state(env: str, paths: Paths, ctx: AzureContext) -> Bootstrap
     terraform_init_local(paths.bootstrap, state_path)
     outputs = terraform_output(paths.bootstrap)
     return bootstrap_state_from_outputs(outputs)
+
+
+def load_observability_state(
+    env: str, paths: Paths, ctx: AzureContext, bootstrap_state: BootstrapState
+) -> ObservabilityState:
+    export_core_tf_env(env, ctx)
+    terraform_init_remote(
+        paths.observability,
+        tenant_id=ctx.tenant_id,
+        state_rg=bootstrap_state.resource_group,
+        state_sa=bootstrap_state.storage_account,
+        state_container=bootstrap_state.container,
+        state_key=state_key(bootstrap_state.state_prefix, "05-observability"),
+    )
+    outputs = terraform_output(paths.observability)
+    return observability_state_from_outputs(outputs)
 
 
 def load_foundation_state(

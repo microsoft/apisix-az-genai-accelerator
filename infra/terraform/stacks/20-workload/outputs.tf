@@ -47,17 +47,17 @@ output "alert_action_group_id" {
 
 output "azure_monitor_workspace_id" {
   description = "Azure Monitor workspace ID"
-  value       = module.azure_monitor_workspace.workspace_id
+  value       = local.azure_monitor_workspace_id
 }
 
 output "azure_monitor_prometheus_endpoint" {
   description = "Azure Monitor Prometheus remote-write base endpoint (without /api/v1/write)"
-  value       = module.azure_monitor_workspace.prometheus_remote_write_endpoint
+  value       = local.azure_monitor_prometheus_endpoint
 }
 
 output "azure_monitor_prometheus_query_endpoint" {
   description = "Azure Monitor Prometheus query endpoint"
-  value       = module.azure_monitor_workspace.prometheus_query_endpoint
+  value       = local.azure_monitor_prometheus_query_endpoint
 }
 
 # Simulator outputs (present when gateway_e2e_test_mode=true)

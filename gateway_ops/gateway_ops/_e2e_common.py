@@ -3,11 +3,10 @@ from __future__ import annotations
 import json
 import logging
 import os
-import subprocess
 import sys
 from typing import Any
 
-from ._utils import ensure, repo_root
+from ._utils import ensure, repo_root, run_logged
 
 logger = logging.getLogger(__name__)
 
@@ -25,15 +24,7 @@ CLIENT_KEY_NAMES = (
 
 
 def _run_command(command: list[str]) -> str:
-    result = subprocess.run(
-        command,
-        text=True,
-        capture_output=True,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(
-            f"Command failed: {' '.join(command)}\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}"
-        )
+    result = run_logged(command, capture_output=True)
     return result.stdout.strip()
 
 
@@ -262,7 +253,9 @@ def run_locust(
         user_count,
         run_time,
     )
-    subprocess.run(cmd, check=True, env={**os.environ, **env}, cwd=TOOLKIT_TEST_ROOT)
+    run_logged(
+        cmd, capture_output=False, env={**os.environ, **env}, cwd=TOOLKIT_TEST_ROOT
+    )
 
 
 __all__ = ["build_test_environment", "run_locust"]

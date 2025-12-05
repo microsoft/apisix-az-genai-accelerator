@@ -51,6 +51,6 @@ output "app_insights_connection_string" {
 
 output "app_insights_instrumentation_key" {
   description = "Application Insights instrumentation key"
-  value       = azurerm_application_insights.this.instrumentation_key
+  value       = length(azurerm_application_insights.this) > 0 ? azurerm_application_insights.this[0].instrumentation_key : ""
   sensitive   = true
 }

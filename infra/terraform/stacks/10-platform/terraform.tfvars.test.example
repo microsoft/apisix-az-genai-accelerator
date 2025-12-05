@@ -1,0 +1,24 @@
+# Environment-specific tfvars for 10-platform (test)
+
+subscription_id = "00000000-0000-0000-0000-000000000000"
+tenant_id       = "11111111-1111-1111-1111-111111111111"
+
+environment_code = "test"
+location         = "eastus"
+workload_name    = "apisix"
+identifier       = ""
+
+key_vault_purge_protection_enabled = false
+platform_rg_name_override          = ""
+acr_name_override                  = ""
+key_vault_name_override            = ""
+deployment_principal_id            = null
+
+# Filled automatically by deploy script from observability outputs
+log_analytics_workspace_id = ""
+
+tags = {
+  owner       = "platform-team"
+  environment = "test"
+  cost_center = "shared-services"
+}

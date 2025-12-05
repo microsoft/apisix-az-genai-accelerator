@@ -70,8 +70,11 @@ variable "log_analytics_workspace_id" {
   description = "Log Analytics workspace ID for diagnostics"
   type        = string
   validation {
-    condition     = can(regex("^/subscriptions/.*/resourceGroups/.*/providers/Microsoft.OperationalInsights/workspaces/.*$", var.log_analytics_workspace_id))
-    error_message = "log_analytics_workspace_id must be a valid Azure Log Analytics workspace resource ID"
+    condition = (
+      var.log_analytics_workspace_id == ""
+      || can(regex("^/subscriptions/.*/resourceGroups/.*/providers/Microsoft.OperationalInsights/workspaces/.*$", var.log_analytics_workspace_id))
+    )
+    error_message = "log_analytics_workspace_id must be empty or a valid Azure Log Analytics workspace resource ID"
   }
 }
 

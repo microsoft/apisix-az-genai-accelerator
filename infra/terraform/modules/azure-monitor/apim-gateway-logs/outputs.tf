@@ -24,3 +24,8 @@ output "stream_name" {
   description = "Log stream name used for ingestion"
   value       = var.stream_name
 }
+
+output "custom_table_name" {
+  description = "Custom table name (when using Custom- stream)"
+  value       = local.custom_table_name
+}

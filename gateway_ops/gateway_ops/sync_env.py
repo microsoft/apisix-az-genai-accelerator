@@ -2,9 +2,18 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import subprocess
 import sys
 from pathlib import Path
+
+from tenacity import (
+    before_sleep_log,
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from ._deploy_common import (
     AzureContext,
@@ -16,7 +25,9 @@ from ._deploy_common import (
     load_foundation_state,
     resolve_paths,
 )
-from ._utils import ensure, repo_root
+from ._utils import ensure, repo_root, run_logged
+
+logger = logging.getLogger(__name__)
 
 
 def read_env(path: Path) -> list[tuple[str, str]]:
@@ -56,6 +67,105 @@ def resolve_key_vault(env: str, override: str) -> str:
     )
 
 
+def _current_object_id() -> str:
+    user_info = json.loads(
+        run_logged(
+            ["az", "account", "show", "--query", "user", "-o", "json"],
+            capture_output=True,
+        ).stdout
+    )
+    user_type = user_info.get("type", "")
+    user_name = user_info.get("name", "")
+
+    if user_type == "user":
+        return run_logged(
+            ["az", "ad", "signed-in-user", "show", "--query", "id", "-o", "tsv"],
+            capture_output=True,
+        ).stdout.strip()
+
+    # service principal flow
+    return run_logged(
+        ["az", "ad", "sp", "show", "--id", user_name, "--query", "id", "-o", "tsv"],
+        capture_output=True,
+    ).stdout.strip()
+
+
+def ensure_kv_secrets_officer(vault_name: str) -> None:
+    kv_id = run_logged(
+        ["az", "keyvault", "show", "-n", vault_name, "--query", "id", "-o", "tsv"],
+        capture_output=True,
+    ).stdout.strip()
+    principal_id = _current_object_id()
+    try:
+        run_logged(
+            [
+                "az",
+                "role",
+                "assignment",
+                "create",
+                "--assignee-object-id",
+                principal_id,
+                "--role",
+                "Key Vault Secrets Officer",
+                "--scope",
+                kv_id,
+                "--only-show-errors",
+                "-o",
+                "none",
+            ],
+            capture_output=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        msg = (exc.stderr or "") + (exc.stdout or "")
+        if "Existing role assignment" in msg or "already exists" in msg:
+            return
+        raise
+
+
+class RbacPropagationError(Exception):
+    """Raised when Key Vault RBAC propagation has not completed yet."""
+
+
+def _is_forbidden_by_rbac(exc: subprocess.CalledProcessError) -> bool:
+    msg = (exc.stderr or "") + (exc.stdout or "")
+    lowered = msg.lower()
+    return (
+        "forbiddenbyrbac" in lowered
+        or "caller is not authorized" in lowered
+        or ("forbidden" in lowered and "keyvault" in lowered)
+    )
+
+
+@retry(
+    reraise=True,
+    retry=retry_if_exception_type(RbacPropagationError),
+    stop=stop_after_attempt(8),
+    wait=wait_exponential(multiplier=1, min=2, max=30),
+    before_sleep=before_sleep_log(logger, logging.WARNING),
+)
+def set_secret_with_retry(vault_name: str, secret_name: str, value: str) -> None:
+    try:
+        run_logged(
+            [
+                "az",
+                "keyvault",
+                "secret",
+                "set",
+                "--vault-name",
+                vault_name,
+                "--name",
+                secret_name,
+                "--value",
+                value,
+            ],
+            capture_output=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        if _is_forbidden_by_rbac(exc):
+            raise RbacPropagationError(str(exc)) from exc
+        raise
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="sync-env",
@@ -91,27 +201,13 @@ def main(argv: list[str] | None = None) -> int:
     secret_keys: list[str] = []
 
     key_vault = resolve_key_vault(args.env, args.key_vault)
+    ensure_kv_secrets_officer(key_vault)
 
     if secrets_file.exists():
         for key, value in read_env(secrets_file):
             secret_keys.append(key)
             secret_name = key.lower().replace("_", "-")
-            subprocess.run(
-                [
-                    "az",
-                    "keyvault",
-                    "secret",
-                    "set",
-                    "--vault-name",
-                    key_vault,
-                    "--name",
-                    secret_name,
-                    "--value",
-                    value,
-                ],
-                text=True,
-                check=True,
-            )
+            set_secret_with_retry(key_vault, secret_name, value)
 
     unique_keys: list[str] = []
     for key in secret_keys:

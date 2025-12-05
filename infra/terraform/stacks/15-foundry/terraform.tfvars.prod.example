@@ -1,0 +1,78 @@
+# Environment-specific tfvars for 15-foundry (prod)
+
+subscription_id  = "00000000-0000-0000-0000-000000000000"
+tenant_id         = "11111111-1111-1111-1111-111111111111"
+environment_code  = "prod"
+location          = "eastus"
+workload_name     = "apisix"
+identifier        = ""
+
+azure_openai_instances = [
+  {
+    name_suffix = "primary"
+    location    = "eastus"
+    priority    = 10
+    weight      = 3
+    deployments = [
+      {
+        name = "gpt-5-mini"
+        model = {
+          name    = "gpt-5-mini"
+          version = "2025-08-07"
+        }
+        scale_type = "GlobalStandard"
+        capacity = 300
+      },
+      {
+        name = "text-embedding-3-small"
+        model = {
+          name    = "text-embedding-3-small"
+          version = "1"
+        }
+        scale_type = "GlobalStandard"
+        capacity = 300
+      }
+    ]
+  },
+  {
+    name_suffix = "secondary"
+    location    = "eastus2"
+    priority    = 5
+    weight      = 1
+    deployments = [
+      {
+        name = "gpt-5-mini"
+        model = {
+          name    = "gpt-5-mini"
+          version = "2025-08-07"
+        }
+        scale_type = "GlobalStandard"
+        capacity = 200
+      },
+      {
+        name = "text-embedding-3-small"
+        model = {
+          name    = "text-embedding-3-small"
+          version = "1"
+        }
+        scale_type = "GlobalStandard"
+        capacity = 200
+      }
+    ]
+  }
+]
+
+azure_openai_network_isolation       = true
+azure_openai_custom_subdomain_prefix = ""
+
+log_analytics_workspace_id = ""
+
+remote_state_resource_group_name  = "rg-terraform-state"
+remote_state_storage_account_name = "stterraformstate123"
+remote_state_container_name       = "tfstate"
+foundation_state_blob_key         = "prod/10-platform.tfstate"
+
+tags = {
+  owner       = "platform-team"
+  environment = "prod"
+}

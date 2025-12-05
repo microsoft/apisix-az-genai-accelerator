@@ -1,0 +1,66 @@
+# Environment-specific tfvars for 20-workload (test)
+
+subscription_id = "00000000-0000-0000-0000-000000000000"
+tenant_id       = "11111111-1111-1111-1111-111111111111"
+
+environment_code = "test"
+location         = "eastus"
+workload_name    = "apisix"
+identifier       = ""
+
+platform_resource_group_name = "rg-apisix-test-eus-platform"
+platform_acr_name            = "acrapisixtesteusplatform"
+key_vault_name               = "kv-apisix-test-eus"
+aca_managed_identity_id      = "/subscriptions/.../resourceGroups/.../providers/Microsoft.ManagedIdentity/userAssignedIdentities/aca-kv-test"
+
+state_resource_group_name  = "rg-terraform-state"
+state_storage_account_name = "stterraformstate123"
+state_container_name       = "tfstate"
+foundation_state_blob_key  = "test/10-platform.tfstate"
+openai_state_blob_key      = "test/15-foundry.tfstate"
+
+app_settings = {
+  APISIX_LOG_LEVEL         = "info"
+  GATEWAY_REQUIRE_AUTH     = "true"
+  OTEL_SAMPLE_RATE         = "1.0"
+  ENABLE_DEBUG_EXPORTER    = "false"
+  AI_PROXY_CONNECT_TIMEOUT = "60"
+  AI_PROXY_SEND_TIMEOUT    = "300"
+  AI_PROXY_READ_TIMEOUT    = "300"
+  AI_PROXY_LOG_SUMMARIES   = "true"
+}
+
+# Empty to allow deploy script to derive from secret_keys
+secret_names = []
+
+direct_environment_variables = {}
+
+gateway_image = "acrapisixtesteusplatform.azurecr.io/apisix-az-genai-accelerator/gateway:latest"
+hydrenv_image = "acrapisixtesteusplatform.azurecr.io/apisix-az-genai-accelerator/hydrenv:latest"
+
+expose_gateway_public = true
+gateway_target_port   = 9080
+gateway_cpu           = 1.0
+gateway_memory        = "2Gi"
+gateway_min_replicas  = 1
+gateway_max_replicas  = 3
+
+otel_collector_cpu    = 0.25
+otel_collector_memory = "0.5Gi"
+
+log_analytics_workspace_id              = ""
+azure_monitor_workspace_id              = ""
+azure_monitor_prometheus_endpoint       = ""
+azure_monitor_prometheus_query_endpoint = ""
+azure_monitor_prometheus_dcr_id         = ""
+log_retention_days                      = 30
+app_insights_connection_string          = ""
+
+enable_alerts         = false
+alert_action_group_id = ""
+
+tags = {
+  owner       = "platform-team"
+  environment = "test"
+  workload    = "apisix"
+}
