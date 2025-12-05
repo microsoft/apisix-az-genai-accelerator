@@ -1,4 +1,3 @@
-````markdown
 # hydrenv
 
 Enterprise-grade Jinja2 template renderer driven by environment variables.
@@ -167,4 +166,3 @@ Templates receive:
 3. **Fail fast**: Let missing required keys error early rather than defaulting to empty strings
 4. **Shell wrappers**: Commit a `render.sh` for complex multi-strategy setups
 5. **Test locally**: Run `hydrenv` directly before containerizing
-````
