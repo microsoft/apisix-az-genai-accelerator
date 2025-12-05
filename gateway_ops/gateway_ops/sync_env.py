@@ -24,6 +24,9 @@ from ._deploy_common import (
     load_bootstrap_state,
     load_foundation_state,
     resolve_paths,
+    state_key,
+    terraform_init_remote,
+    terraform_output,
 )
 from ._utils import ensure, repo_root, run_logged
 
@@ -166,6 +169,55 @@ def set_secret_with_retry(vault_name: str, secret_name: str, value: str) -> None
         raise
 
 
+def _sync_foundry_secrets(env: str, vault_name: str) -> None:
+    paths = resolve_paths()
+    ctx = azure_context()
+    bootstrap = load_bootstrap_state(env, paths, ctx)
+    # Foundry stack is optional; skip silently if missing.
+    if not paths.foundry.exists():
+        logger.info("15-foundry stack not present; skipping provisioned OpenAI secrets sync")
+        return
+
+    foundry_state_key = state_key(bootstrap.state_prefix, "15-foundry")
+    try:
+        terraform_init_remote(
+            paths.foundry,
+            tenant_id=ctx.tenant_id,
+            state_rg=bootstrap.resource_group,
+            state_sa=bootstrap.storage_account,
+            state_container=bootstrap.container,
+            state_key=foundry_state_key,
+        )
+        outputs = terraform_output(paths.foundry)
+    except Exception as exc:
+        logger.info(
+            "Skipping provisioned OpenAI secret sync (could not read 15-foundry state: %s)",
+            exc,
+        )
+        return
+
+    secret_names = outputs.get("azure_openai_key_vault_secret_names", {}).get("value") or []
+    secret_values = outputs.get("azure_openai_primary_keys", {}).get("value") or []
+
+    if not secret_names or not secret_values:
+        logger.info(
+            "No provisioned OpenAI secrets found in 15-foundry outputs; skipping sync"
+        )
+        return
+
+    if len(secret_names) != len(secret_values):
+        logger.warning(
+            "Mismatch between OpenAI secret names and values (%d vs %d); skipping sync",
+            len(secret_names),
+            len(secret_values),
+        )
+        return
+
+    logger.info("Syncing %d provisioned OpenAI secrets into Key Vault %s", len(secret_names), vault_name)
+    for name, value in zip(secret_names, secret_values):
+        set_secret_with_retry(vault_name, name, value)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="sync-env",
@@ -208,6 +260,9 @@ def main(argv: list[str] | None = None) -> int:
             secret_keys.append(key)
             secret_name = key.lower().replace("_", "-")
             set_secret_with_retry(key_vault, secret_name, value)
+
+    if args.use_provisioned_openai:
+        _sync_foundry_secrets(args.env, key_vault)
 
     unique_keys: list[str] = []
     for key in secret_keys:

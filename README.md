@@ -107,7 +107,15 @@ Notes:
 
 ---
 
-### 4) Deploy the gateway (and build/push images)
+### 4) (Optional) Provision Azure AI Foundry / Azure OpenAI
+
+If you want Terraform to stand up Azure AI Foundry/OpenAI resources instead of bringing your own endpoints, run:
+
+```bash
+uv run deploy-foundry "$ENV"
+```
+
+### 5) Deploy the gateway (and build/push images)
 
 This command:
 
@@ -119,17 +127,9 @@ This command:
 uv run deploy-workload "$ENV"
 ```
 
-### (Optional) Provision Azure AI Foundry / Azure OpenAI
-
-If you want Terraform to stand up Azure AI Foundry/OpenAI resources instead of bringing your own endpoints, run:
-
-```bash
-uv run deploy-foundry "$ENV"
-```
-
 ---
 
-### 5) Send your first request
+### 6) Send your first request
 
 Use **any** of the supported client auth headers:
 
