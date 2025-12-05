@@ -270,7 +270,6 @@ def ensure_tfvars(
     candidates = [
         stack_dir / f"terraform.tfvars.{env}.example",
         stack_dir / f"{env}.tfvars.example",
-        stack_dir / "terraform.tfvars.example",
     ]
     example = next((path for path in candidates if path.exists()), None)
 

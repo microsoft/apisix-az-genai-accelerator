@@ -49,11 +49,11 @@ locals {
 
   provisioned_secret_names = local.openai_outputs != null && can(local.openai_outputs.azure_openai_key_vault_secret_names) ? local.openai_outputs.azure_openai_key_vault_secret_names : []
 
-  derived_secret_keys = distinct(var.secret_keys)
+  derived_secret_keys = distinct(keys(var.secrets))
 
   derived_app_settings = var.app_settings
 
-  derived_secret_names = length(var.secret_names) > 0 ? var.secret_names : [
+  derived_secret_names = [
     for key in local.derived_secret_keys : lower(replace(key, "_", "-"))
   ]
 
@@ -89,14 +89,6 @@ locals {
     local.derived_secret_names
   ))
 
-  apim_gateway_logs_env = {
-    APIM_GATEWAY_LOGS_INGEST_URI = var.gateway_log_ingest_uri
-    APIM_GATEWAY_LOGS_STREAM     = var.gateway_log_stream_name
-  }
-
-  final_direct_env_vars = var.gateway_e2e_test_mode && var.gateway_log_ingest_uri != "" ? merge(var.direct_environment_variables, local.apim_gateway_logs_env, {
-    GATEWAY_E2E_TEST_MODE = "true"
-  }) : var.direct_environment_variables
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -262,7 +254,6 @@ module "gateway" {
   key_vault_managed_identity_id = var.aca_managed_identity_id
   app_settings                  = local.final_app_settings
   secret_names                  = local.final_secret_names
-  direct_environment_variables  = local.final_direct_env_vars
 
   # Gateway configuration
   expose_gateway_public = var.expose_gateway_public
@@ -281,9 +272,9 @@ module "gateway" {
   tenant_id                         = data.azurerm_client_config.current.tenant_id
 
   # Observability sidecars
-  otel_collector_image   = var.otel_collector_image
-  otel_collector_cpu     = var.otel_collector_cpu
-  otel_collector_memory  = var.otel_collector_memory
+  otel_collector_image  = var.otel_collector_image
+  otel_collector_cpu    = var.otel_collector_cpu
+  otel_collector_memory = var.otel_collector_memory
 
   tags = local.common_tags
 }

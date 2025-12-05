@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 REPO_ROOT = repo_root()
 STACK_DIR = REPO_ROOT / "infra" / "terraform" / "stacks" / "20-workload"
 TOOLKIT_TEST_ROOT = REPO_ROOT / "apim-genai-gateway-toolkit" / "end_to_end_tests"
-ENV_AUTO_FILE = STACK_DIR / "environment.auto.tfvars.json"
 APIM_GATEWAY_LOGS_TABLE = "APISIXGatewayLogs_CL"
 CLIENT_KEY_NAMES = (
     "GATEWAY_CLIENT_KEY_0",
@@ -26,14 +25,6 @@ CLIENT_KEY_NAMES = (
 def _run_command(command: list[str]) -> str:
     result = run_logged(command, capture_output=True)
     return result.stdout.strip()
-
-
-def _load_auto_tfvars() -> dict[str, Any]:
-    if not ENV_AUTO_FILE.exists():
-        raise FileNotFoundError(
-            f"{ENV_AUTO_FILE} is missing. Run 'uv run deploy-vars -- <env> [--key-vault <name>]' first."
-        )
-    return json.loads(ENV_AUTO_FILE.read_text())
 
 
 def _terraform_outputs() -> dict[str, Any]:
@@ -130,38 +121,39 @@ def _secret_from_key_vault(vault_name: str, key: str) -> str | None:
 
 def _load_client_keys(
     vault_name: str,
-    secret_keys: list[str],
-    app_settings: dict[str, str],
+    secret_names: list[str],
 ) -> list[str]:
+    # derive env-style keys from secret names (gateway-client-key-N)
+    env_keys: list[str] = []
+    for name in secret_names:
+        if name.startswith("gateway-client-key-"):
+            suffix = name.rsplit("-", 1)[-1]
+            if suffix.isdigit():
+                env_keys.append(f"GATEWAY_CLIENT_KEY_{suffix}")
+    if not env_keys:
+        env_keys = list(CLIENT_KEY_NAMES)
+
     keys: list[str] = []
-    for key in CLIENT_KEY_NAMES:
-        value = None
-        if key in secret_keys:
-            value = _secret_from_key_vault(vault_name, key)
-        if value is None:
-            value = app_settings.get(key)
+    for key in env_keys:
+        value = _secret_from_key_vault(vault_name, key)
         if value is None:
             value = os.getenv(key)
         if value is None:
             raise RuntimeError(
-                f"Client key '{key}' not found in Key Vault '{vault_name}', app settings, or environment."
+                f"Client key '{key}' not found in Key Vault '{vault_name}' or environment."
             )
         keys.append(value)
     return keys
 
 
 def build_test_environment() -> dict[str, str]:
-    auto = _load_auto_tfvars()
     outputs = _terraform_outputs()
 
     gateway_url = str(_output_value(outputs, "gateway_url")).rstrip("/")
     resource_group_name = str(_output_value(outputs, "resource_group_name"))
     workspace_resource_id = str(_output_value(outputs, "log_analytics_workspace_id"))
     workspace_id, workspace_name = _workspace_info(workspace_resource_id)
-    subscription_id, tenant_id = _account_context(
-        fallback_subscription=str(auto.get("subscription_id", "")),
-        fallback_tenant=str(auto.get("tenant_id", "")),
-    )
+    subscription_id, tenant_id = _account_context()
 
     simulator_api_key = str(_output_value(outputs, "simulator_api_key"))
     simulator_ptu1 = str(_output_value(outputs, "simulator_ptu1_fqdn"))
@@ -174,13 +166,9 @@ def build_test_environment() -> dict[str, str]:
         else ""
     )
 
-    secret_keys = auto.get("secret_keys", [])
-    app_settings = auto.get("app_settings", {})
-    vault_name = auto.get("key_vault_name")
-    if vault_name is None or vault_name == "":
-        raise RuntimeError("key_vault_name missing from environment.auto.tfvars.json")
-
-    client_keys = _load_client_keys(vault_name, secret_keys, app_settings)
+    vault_name = str(_output_value(outputs, "key_vault_name"))
+    secret_names = outputs.get("secret_names", {}).get("value") or []
+    client_keys = _load_client_keys(vault_name, secret_names)
 
     env = {
         "APIM_SUBSCRIPTION_ONE_KEY": client_keys[0],

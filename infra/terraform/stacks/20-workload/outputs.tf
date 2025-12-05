@@ -81,3 +81,13 @@ output "simulator_payg2_fqdn" {
   description = "Simulator PAYG2 FQDN (test mode)"
   value       = var.gateway_e2e_test_mode ? "https://${local.sim_payg2_name}.${module.env.default_domain}" : null
 }
+
+output "key_vault_name" {
+  description = "Key Vault backing the gateway secrets"
+  value       = var.key_vault_name
+}
+
+output "secret_names" {
+  description = "Resolved list of secret names mounted into the gateway"
+  value       = local.final_secret_names
+}

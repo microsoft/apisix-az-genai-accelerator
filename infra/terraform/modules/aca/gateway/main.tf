@@ -97,7 +97,7 @@ resource "azurerm_application_insights" "this" {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Environment variable processing (legacy .env file or Key Vault + app settings)
+# Environment variable processing (Key Vault + app settings only)
 # ─────────────────────────────────────────────────────────────────────────────
 
 locals {
@@ -108,11 +108,8 @@ locals {
   # Use only the secrets that are provided, no hardcoded APISIX secrets
   all_kv_secrets = local.kv_secret_names
 
-  # Direct environment variables
-  direct_env_vars = var.direct_environment_variables
-
-  # Final configuration combines non-secret app settings with direct env vars
-  app_setting_env_vars = merge(local.kv_app_settings, local.direct_env_vars)
+  # Final configuration uses non-secret app settings as provided
+  app_setting_env_vars = local.kv_app_settings
 
   container_identity_ids = toset(
     compact([

@@ -123,10 +123,10 @@ variable "app_settings" {
   default     = {}
 }
 
-variable "secret_names" {
-  description = "List of secret names in Key Vault"
-  type        = list(string)
-  default     = []
+variable "secrets" {
+  description = "Map of secret environment variable names to values; used to seed Key Vault (not referenced directly by Terraform resources)"
+  type        = map(string)
+  default     = {}
 }
 
 variable "gateway_image" {
@@ -151,12 +151,6 @@ variable "use_provisioned_azure_openai" {
   description = "Use Azure OpenAI endpoints provisioned by foundation stack (auto-detected by setup script)"
   type        = bool
   default     = false
-}
-
-variable "direct_environment_variables" {
-  description = "Environment variables injected directly into the Container Apps workload"
-  type        = map(string)
-  default     = {}
 }
 
 variable "gateway_e2e_test_mode" {
@@ -197,12 +191,6 @@ variable "simulator_port" {
 
 variable "simulator_client_ips" {
   description = "Additional client CIDRs allowed to reach simulators when public ingress is enabled"
-  type        = list(string)
-  default     = []
-}
-
-variable "secret_keys" {
-  description = "List of environment variable names treated as secrets"
   type        = list(string)
   default     = []
 }

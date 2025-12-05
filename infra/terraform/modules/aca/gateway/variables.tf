@@ -80,12 +80,6 @@ variable "secret_names" {
   default     = []
 }
 
-variable "direct_environment_variables" {
-  description = "Additional environment variables injected directly into the containers"
-  type        = map(string)
-  default     = {}
-}
-
 # ─────────────────────────────────────────────────────────────────────────────
 # ACR configuration (external/platform ACR is required)
 # ─────────────────────────────────────────────────────────────────────────────

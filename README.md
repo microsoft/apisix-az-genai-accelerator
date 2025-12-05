@@ -84,13 +84,17 @@ uv run deploy-platform       "$ENV"   # ACR, Key Vault, identities
 
 ### 3) Configure your backends + gateway client keys
 
-Edit your environment configuration:
+Copy the per-environment tfvars example and fill in **only** the maps in that file:
 
-- `config/appsettings.$ENV.env` → non-secrets (endpoints, weights, names, feature flags)
+```bash
+cp infra/terraform/stacks/20-workload/terraform.tfvars.$ENV.example \
+   infra/terraform/stacks/20-workload/$ENV.tfvars
+```
 
-Create your environment secrets:
+Then edit `infra/terraform/stacks/20-workload/$ENV.tfvars`:
 
-- `config/secrets.$ENV.env` → secrets (backend keys, gateway client keys)
+- `app_settings = { … }` → non-secrets (endpoints, weights, names, feature flags)
+- `secrets = { … }` → secrets (backend keys, gateway client keys)
 
 Notes:
 
@@ -119,7 +123,7 @@ uv run deploy-foundry "$ENV"
 
 This command:
 
-- syncs your config/secrets into Key Vault,
+- seeds Key Vault from `secrets` in your tfvars,
 - builds/pushes container images (remote ACR build by default),
 - deploys the Container Apps workload.
 
@@ -213,7 +217,7 @@ This accelerator runs APISIX in **standalone mode** and includes a config render
 
 Typical flow:
 
-1. Update `config/appsettings.$ENV.env` and/or `config/secrets.$ENV.env`
+1. Update `infra/terraform/stacks/20-workload/$ENV.tfvars`
 2. Run your normal workload deploy (or sync step, depending on your workflow)
 3. **Restart / roll a new Container App revision**
 4. APISIX picks up the newly rendered config on boot

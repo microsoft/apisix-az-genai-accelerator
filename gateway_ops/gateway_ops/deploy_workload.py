@@ -9,7 +9,8 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from gateway_ops._utils import ensure, read_env, run_logged
+from gateway_ops._openai_secrets import seed_openai_secrets, set_secret_with_retry
+from gateway_ops._utils import ensure, run_logged
 
 from ._deploy_common import (
     AzureContext,
@@ -96,8 +97,6 @@ def deploy_workload(
             "gateway_log_ingest_uri": observability.gateway_logs_ingest_uri or "",
             "gateway_log_stream_name": observability.gateway_logs_stream_name or "",
             "gateway_log_table_name": observability.gateway_logs_table_name or "",
-            # ensure secrets list is valid (derive from secret_keys otherwise)
-            "secret_names": [],
             # platform handoff (ensure current values)
             "key_vault_name": foundation.key_vault_name,
             "aca_managed_identity_id": foundation.aca_identity_id,
@@ -165,7 +164,9 @@ def deploy_workload(
         os.environ["TF_VAR_use_provisioned_azure_openai"] = "false"
         os.environ.pop("TF_VAR_openai_state_blob_key", None)
 
-    _sync_environment(env, foundation.key_vault_name, openai_info.provisioned)
+    _seed_secrets_and_openai(
+        env, tfvars_file, foundation.key_vault_name, openai_info.provisioned, paths
+    )
 
     # Ensure tfvars reflect latest platform outputs (especially ACR name/RG)
     update_tfvars(
@@ -205,7 +206,7 @@ def deploy_workload(
     if deploy_e2e:
         _emit_toolkit_outputs(paths.workload, paths.toolkit_root)
 
-    _print_gateway_keys(paths.config_dir / f"secrets.{env}.env")
+    _print_gateway_keys(tfvars_file, foundation.key_vault_name)
 
 
 def _detect_openai_state(
@@ -242,16 +243,57 @@ def _detect_openai_state(
     return FoundryState(provisioned=True, state_blob_key=openai_state_key)
 
 
-def _sync_environment(env: str, key_vault: str, use_provisioned_openai: bool) -> None:
-    sync_cmd = ["uv", "run", "deploy-vars", env]
-    if key_vault != "":
-        sync_cmd.extend(["--key-vault", key_vault])
-    identifier = os.environ.get("TF_VAR_identifier")
-    if identifier is not None and identifier != "":
-        sync_cmd.extend(["--identifier", identifier])
-    if use_provisioned_openai:
-        sync_cmd.append("--use-provisioned-openai")
-    run_logged(sync_cmd, capture_output=False)
+def _infer_openai_secret_names(app_settings: dict[str, str]) -> list[str]:
+    indices: set[int] = set()
+    prefix = "AZURE_OPENAI_"
+    for key in app_settings:
+        if not key.startswith(prefix):
+            continue
+        maybe_index = key.rsplit("_", 1)[-1]
+        if maybe_index.isdigit():
+            indices.add(int(maybe_index))
+    return [f"azure-openai-key-{idx}" for idx in sorted(indices)]
+
+
+def _seed_secrets_and_openai(
+    env: str,
+    tfvars_file: Path,
+    key_vault: str,
+    use_provisioned_openai: bool,
+    paths: Paths,
+) -> None:
+    data = load_tfvars(tfvars_file)
+    app_settings: dict[str, str] = {
+        k: str(v) for k, v in data.get("app_settings", {}).items()
+    }
+    secrets: dict[str, str] = {
+        k: str(v) for k, v in (data.get("secrets", {}) or {}).items()
+    }
+
+    # Seed non-AOAI secrets to KV
+    for key, value in secrets.items():
+        secret_name = key.lower().replace("_", "-")
+        set_secret_with_retry(key_vault, secret_name, value)
+
+    # Seed AOAI secrets (provisioned or expected)
+    openai_secret_names = _infer_openai_secret_names(app_settings)
+    should_seed_openai = (
+        paths.foundry.exists() or use_provisioned_openai or len(openai_secret_names) > 0
+    )
+    if should_seed_openai:
+        seed_openai_secrets(
+            env,
+            key_vault,
+            expected_secret_names=openai_secret_names,
+            allow_placeholders=True,
+            paths=paths,
+        )
+
+    # Basic validation: ensure at least one gateway client key is present in tfvars
+    if not any(key.startswith("GATEWAY_CLIENT_KEY_") for key in secrets):
+        raise RuntimeError(
+            "No gateway client keys provided in tfvars 'secrets'. Add at least GATEWAY_CLIENT_KEY_0."
+        )
 
 
 def _set_env_vars(values: dict[str, str | None]) -> None:
@@ -392,19 +434,45 @@ def _emit_toolkit_outputs(workload_dir: Path, toolkit_root: Path) -> None:
         write_json(apim_out, apim_data)
 
 
-def _print_gateway_keys(path: Path) -> None:
-    if not path.exists():
-        logger.info("Gateway client keys: none specified in %s", path)
+def _print_gateway_keys(tfvars_path: Path, key_vault: str) -> None:
+    try:
+        data = load_tfvars(tfvars_path)
+    except Exception:
+        logger.info("Gateway client keys: tfvars unreadable at %s", tfvars_path)
         return
 
-    logger.info("Gateway client keys (from %s):", path)
-    found = False
-    for key, value in read_env(path):
-        if key.startswith("GATEWAY_CLIENT_KEY_"):
+    secrets_map = data.get("secrets", {}) or {}
+    client_keys = [
+        k for k in secrets_map.keys() if str(k).startswith("GATEWAY_CLIENT_KEY_")
+    ]
+    if not client_keys:
+        logger.info("Gateway client keys: none specified in %s", tfvars_path)
+        return
+
+    logger.info("Gateway client keys (from Key Vault %s):", key_vault)
+    for key in client_keys:
+        secret_name = str(key).lower().replace("_", "-")
+        try:
+            value = run_logged(
+                [
+                    "az",
+                    "keyvault",
+                    "secret",
+                    "show",
+                    "--vault-name",
+                    key_vault,
+                    "--name",
+                    secret_name,
+                    "--query",
+                    "value",
+                    "-o",
+                    "tsv",
+                ],
+                capture_output=True,
+            ).stdout.strip()
             logger.info("%s=%s", key, value)
-            found = True
-    if not found:
-        logger.info("  (none specified)")
+        except subprocess.CalledProcessError:
+            logger.info("%s=(missing in Key Vault)", key)
 
 
 def main(argv: list[str] | None = None) -> int:

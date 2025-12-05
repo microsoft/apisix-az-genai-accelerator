@@ -23,7 +23,6 @@ from ._deploy_common import (
     terraform_init_remote,
     update_tfvars,
 )
-from .sync_env import ensure_kv_secrets_officer
 from ._openai_secrets import seed_openai_secrets
 
 logger = logging.getLogger(__name__)
@@ -89,7 +88,6 @@ def deploy_foundry(
         state_key=openai_state_key,
     )
     terraform_apply(paths.foundry, tfvars_file)
-    ensure_kv_secrets_officer(foundation.key_vault_name)
     seed_summary = seed_openai_secrets(
         env,
         foundation.key_vault_name,
@@ -101,7 +99,7 @@ def deploy_foundry(
     if len(seed_summary["seeded"]) == 0:
         logger.warning(
             "Foundry apply succeeded but no OpenAI secrets were seeded into %s; "
-            "rerun deploy-vars after verifying terraform outputs",
+            "rerun deploy-workload after verifying terraform outputs",
             foundation.key_vault_name,
         )
     else:
@@ -132,6 +130,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
-# Backwards-compatible alias
-deploy_openai = deploy_foundry
