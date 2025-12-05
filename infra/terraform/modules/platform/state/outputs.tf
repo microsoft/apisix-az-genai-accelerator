@@ -38,8 +38,3 @@ container_name       = "${local.state_container_name}"
 key                  = "${local.state_blob_key}"
 EOT
 }
-
-output "private_endpoint_id" {
-  description = "ID of the private endpoint (if created)"
-  value       = var.enable_state_sa_private_endpoint ? module.pe_state_sa[0].resource_id : null
-}

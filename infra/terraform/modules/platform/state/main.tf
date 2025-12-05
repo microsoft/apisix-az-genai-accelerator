@@ -1,5 +1,5 @@
 /// Module: platform/state
-/// Purpose: Remote state storage account, resource group, RBAC, and optional private endpoint
+/// Purpose: Remote state storage account, resource group, and RBAC
 
 terraform {
   required_providers {
@@ -51,14 +51,6 @@ locals {
 
   allowed_ip_rules = [for ip in var.allowed_public_ip_addresses : ip]
 
-  private_endpoint_network_rules = {
-    default_action             = "Deny"
-    bypass                     = ["AzureServices"]
-    ip_rules                   = []
-    virtual_network_subnet_ids = []
-    private_link_access        = null
-  }
-
   public_ip_network_rules = {
     default_action             = "Deny"
     bypass                     = ["AzureServices"]
@@ -67,15 +59,7 @@ locals {
     private_link_access        = null
   }
 
-  computed_network_rules = (
-    var.enable_state_sa_private_endpoint
-    ? local.private_endpoint_network_rules
-    : (
-      length(local.allowed_ip_rules) > 0
-      ? local.public_ip_network_rules
-      : null
-    )
-  )
+  computed_network_rules = length(local.allowed_ip_rules) > 0 ? local.public_ip_network_rules : null
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -134,25 +118,6 @@ module "state_sa" {
   diagnostic_settings_storage_account = {}
 
   tags = local.common_tags
-}
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Private Endpoint (optional)
-# ─────────────────────────────────────────────────────────────────────────────
-
-module "pe_state_sa" {
-  count   = var.enable_state_sa_private_endpoint ? 1 : 0
-  source  = "Azure/avm-res-network-privateendpoint/azurerm"
-  version = "0.2.0"
-
-  name                           = module.naming_state.private_endpoint.name
-  location                       = local.location_canonical
-  resource_group_name            = module.state_rg.name
-  subnet_resource_id             = var.private_link_subnet_id
-  private_connection_resource_id = module.state_sa.resource_id
-  network_interface_name         = module.naming_state.network_interface.name
-  subresource_names              = ["blob"]
-  tags                           = local.common_tags
 }
 
 # ─────────────────────────────────────────────────────────────────────────────

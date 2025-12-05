@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Literal
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -20,6 +20,7 @@ def run_logged(
     capture_output: bool = False,
     text: bool = True,
     check: bool = True,
+    echo: Literal["always", "on_error", "never"] = "always",
     **kwargs: object,
 ) -> subprocess.CompletedProcess[str]:
     """
@@ -32,7 +33,9 @@ def run_logged(
         text=text,
         **kwargs,  # type: ignore[arg-type]
     )
-    if capture_output:
+    if capture_output and (
+        echo == "always" or (echo == "on_error" and result.returncode != 0)
+    ):
         if result.stdout:
             sys.stdout.write(result.stdout)
         if result.stderr:
@@ -49,6 +52,18 @@ def ensure(commands: Iterable[str]) -> None:
         if shutil.which(name) is None:
             sys.stderr.write(f"missing dependency: {name}\n")
             sys.exit(1)
+
+
+def read_env(path: Path) -> list[tuple[str, str]]:
+    pairs: list[tuple[str, str]] = []
+    with path.open() as handle:
+        for raw in handle:
+            line = raw.strip()
+            if line == "" or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            pairs.append((key, value))
+    return pairs
 
 
 def derive_image_tag(root: Path) -> str:

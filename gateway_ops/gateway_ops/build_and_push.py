@@ -1,14 +1,15 @@
 from __future__ import annotations
 
+import argparse
 import json
 import os
-import re
 import tempfile
 from contextlib import contextmanager
 from pathlib import Path
 from shutil import copy2, copytree
 from typing import Iterable, Iterator
 
+from ._deploy_common import load_tfvars, update_tfvars
 from ._utils import derive_image_tag, ensure, repo_root, run_logged
 
 
@@ -69,10 +70,41 @@ def build_and_push(
 
     tfvars = tfvars_path or _auto_tfvars_path(root, registry_name)
     if tfvars and tfvars_key:
-        _update_tfvars(tfvars, [(tfvars_key, full_image)])
+        update_tfvars(tfvars, {tfvars_key: full_image})
 
     print(full_image)
     return full_image
+
+
+def build_cli(
+    *,
+    argv: list[str] | None,
+    description: str,
+    target: str,
+    dockerfile: Path,
+    build_context: Path,
+    include_paths: Iterable[Path],
+    tfvars_key: str | None,
+) -> int:
+    parser = argparse.ArgumentParser(
+        prog=f"build-and-push-{target}",
+        description=description,
+    )
+    parser.add_argument(
+        "--local-docker", action="store_true", help="Build locally with docker"
+    )
+    args = parser.parse_args(argv)
+
+    build_and_push(
+        target=target,
+        dockerfile=dockerfile,
+        build_context=build_context,
+        include_paths=include_paths,
+        tfvars_key=tfvars_key,
+        local_docker=args.local_docker,
+        tfvars_path=None,
+    )
+    return 0
 
 
 def _terraform_outputs(stack_dir: Path) -> dict:
@@ -186,35 +218,17 @@ def _staged_context(
         yield context_root, dockerfile, build_context
 
 
-def _update_tfvars(tfvars_path: Path, replacements: Iterable[tuple[str, str]]) -> None:
-    if not tfvars_path.exists():
-        raise FileNotFoundError(f"tfvars file not found: {tfvars_path}")
-
-    content = tfvars_path.read_text()
-    updated = content
-
-    for key, value in replacements:
-        pattern = rf"^{key}\s*=\s*\".*?\""
-        replacement = f'{key} = "{value}"'
-        updated = re.sub(pattern, replacement, updated, count=1, flags=re.MULTILINE)
-
-    if updated != content:
-        tfvars_path.write_text(updated)
-        print(f"Updated image tags in {tfvars_path}")
-
-
 def _auto_tfvars_path(root: Path, registry: str) -> Path | None:
     stack_dir = root / "infra" / "terraform" / "stacks" / "20-workload"
     if not stack_dir.exists():
         return None
 
     for tfvars in stack_dir.glob("*.tfvars"):
-        match = re.search(
-            r'^platform_acr_name\s*=\s*"([^"]+)"',
-            tfvars.read_text(),
-            flags=re.MULTILINE,
-        )
-        if match and match.group(1) == registry:
+        try:
+            data = load_tfvars(tfvars)
+        except Exception:
+            continue
+        if str(data.get("platform_acr_name", "")) == registry:
             print(f"Auto-selected tfvars: {tfvars} (registry match)")
             return tfvars
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import logging
 
-from ._e2e_common import build_test_environment, run_locust
+from ._e2e_common import run_scenario
 
 DEFAULT_ENDPOINT_PATH = "prioritization-simple"
 
@@ -17,20 +17,19 @@ def run(
     request_type: str = "embeddings",
     max_tokens: int = -1,
 ) -> None:
-    env = base_env or build_test_environment()
     extra_env = {
         "LOAD_PATTERN": load_pattern,
         "RAMP_RATE": str(ramp_rate),
         "REQUEST_TYPE": request_type,
         "MAX_TOKENS": str(max_tokens),
     }
-    run_locust(
+    run_scenario(
         test_file="scenario_prioritization.py",
         endpoint_path=endpoint_path,
         user_count=-1,
         run_time=None,
         extra_env=extra_env,
-        base_env=env,
+        base_env=base_env,
     )
 
 

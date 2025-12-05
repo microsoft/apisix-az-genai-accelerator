@@ -42,8 +42,8 @@ hydrenv_image = "acrplatformapisixprodeastus.azurecr.io/apisix-az-genai-accelera
 
 expose_gateway_public = true
 gateway_target_port   = 9080
-gateway_cpu           = 2.0
-gateway_memory        = "4Gi"
+gateway_cpu           = 1.75
+gateway_memory        = "3.5Gi"
 gateway_min_replicas  = 2
 gateway_max_replicas  = 10
 

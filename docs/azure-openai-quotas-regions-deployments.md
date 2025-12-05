@@ -56,6 +56,11 @@ If you expose **many** backends (across regions and/or resources), the gateway c
 - try a different backend **within the same request** on 429/5xx
 - route new requests toward backends with better headroom (via weights / priority lanes)
 
+### 5) GlobalStandard is a single global quota bucket
+
+`GlobalStandard` deployments route across Microsoft’s global infrastructure and **share quota at the subscription + model level**, regardless of which regions you place the deployments in. That means two `GlobalStandard` deployments of `gpt-5-mini` in `eastus` and `eastus2` draw from the same TPM/RPM pool. Use `Standard` or `DataZoneStandard` if you need region-scoped quota, or request higher GlobalStandard quota if you want the global pool.  
+References: [Deployment types](https://learn.microsoft.com/en-us/azure/ai-studio/ai-services/concepts/deployment-types#global-standard) and [Azure OpenAI quotas](https://learn.microsoft.com/en-us/azure/ai-foundry/openai/quotas-limits).
+
 ---
 
 ## How this repo uses that model

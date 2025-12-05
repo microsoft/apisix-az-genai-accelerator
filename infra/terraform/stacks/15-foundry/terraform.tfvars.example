@@ -7,11 +7,11 @@
 # -----------------------------------------------------------------------------
 
 subscription_id  = "00000000-0000-0000-0000-000000000000"
-tenant_id         = "11111111-1111-1111-1111-111111111111"
-environment_code  = "dev"
-location          = "eastus"
-workload_name     = "apisix"
-identifier        = ""
+tenant_id        = "11111111-1111-1111-1111-111111111111"
+environment_code = "dev"
+location         = "eastus"
+workload_name    = "apisix"
+identifier       = ""
 
 # When reusing existing Azure OpenAI deployments, leave the list empty and
 # skip running this stack. The example below provisions two instances and
@@ -29,8 +29,8 @@ azure_openai_instances = [
           name    = "gpt-5-mini"
           version = "2025-08-07"
         }
-        scale_type = "GlobalStandard"
-        capacity = 150
+        scale_type = "DataZoneStandard"
+        capacity   = 150
       },
       {
         name = "text-embedding-3-small"
@@ -38,8 +38,8 @@ azure_openai_instances = [
           name    = "text-embedding-3-small"
           version = "1"
         }
-        scale_type = "GlobalStandard"
-        capacity = 150
+        scale_type = "Standard"
+        capacity   = 150
       }
     ]
   },
@@ -55,8 +55,8 @@ azure_openai_instances = [
           name    = "gpt-5-mini"
           version = "2025-08-07"
         }
-        scale_type = "GlobalStandard"
-        capacity = 150
+        scale_type = "DataZoneStandard"
+        capacity   = 150
       },
       {
         name = "text-embedding-3-small"
@@ -64,8 +64,8 @@ azure_openai_instances = [
           name    = "text-embedding-3-small"
           version = "1"
         }
-        scale_type = "GlobalStandard"
-        capacity = 150
+        scale_type = "Standard"
+        capacity   = 150
       }
     ]
   }

@@ -54,18 +54,6 @@ variable "soft_delete_retention_days" {
   default     = 30
 }
 
-variable "private_link_subnet_id" {
-  description = "Subnet ID for private endpoints (optional)"
-  type        = string
-  default     = ""
-}
-
-variable "enable_state_sa_private_endpoint" {
-  description = "Create private endpoint for state storage account"
-  type        = bool
-  default     = false
-}
-
 variable "state_rg_name_override" {
   description = "Override auto-generated state resource group name"
   type        = string

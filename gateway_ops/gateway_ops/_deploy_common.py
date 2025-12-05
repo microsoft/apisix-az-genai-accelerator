@@ -4,14 +4,20 @@ import json
 import logging
 import os
 import subprocess
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import hcl2
+import hcl2  # type: ignore[import-not-found]
+from tenacity import (  # type: ignore[import-not-found]
+    RetryCallState,
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
-from ._utils import repo_root
+from ._utils import repo_root, run_logged
 
 logger = logging.getLogger(__name__)
 
@@ -76,23 +82,87 @@ class FoundryState:
     state_blob_key: str | None
 
 
+class StorageRbacPropagationError(Exception):
+    """Raised when Storage data plane RBAC has not propagated yet."""
+
+
+class RequestConflictError(Exception):
+    """Raised when Azure reports a transient 409 RequestConflict on apply."""
+
+
+def _is_storage_rbac_error(exc: subprocess.CalledProcessError) -> bool:
+    message = (exc.stderr or "") + (exc.output or "")
+    lowered = message.lower()
+    return (
+        "authorizationpermissionmismatch" in lowered
+        or "this request is not authorized to perform this operation" in lowered
+        or "status 403" in lowered
+    )
+
+
+def _log_storage_retry(retry_state: RetryCallState) -> None:
+    attempt = retry_state.attempt_number
+    sleep_for = (
+        f"; waiting {retry_state.next_action.sleep:.0f}s"
+        if retry_state.next_action and retry_state.next_action.sleep is not None
+        else ""
+    )
+    logger.warning(
+        "Terraform init: retrying remote state access after storage 403 "
+        "(attempt %d/8)%s",
+        attempt,
+        sleep_for,
+    )
+
+
+def _is_request_conflict(exc: subprocess.CalledProcessError) -> bool:
+    message = (exc.stderr or "") + (exc.output or "")
+    lowered = message.lower()
+    # If a 400 or other hard validation error is present, do not treat as retryable.
+    if (
+        "response 400" in lowered
+        or "invalidresource" in lowered
+        or "insufficientquota" in lowered
+    ):
+        return False
+    return (
+        "requestconflict" in lowered
+        or "another operation is being performed on the parent resource" in lowered
+        or "status code 409" in lowered
+        or "response 409" in lowered
+    )
+
+
+def _is_fatal_apply_error(exc: subprocess.CalledProcessError) -> bool:
+    message = (exc.stderr or "") + (exc.output or "")
+    lowered = message.lower()
+    fatal_markers = (
+        "invalidresourceproperties",
+        "invalid resource properties",
+        "not supported by the model",
+        "insufficientquota",
+        "insufficient quota",
+        "quota limit",
+    )
+    return any(marker in lowered for marker in fatal_markers)
+
+
+def _log_apply_retry(retry_state: RetryCallState) -> None:
+    attempt = retry_state.attempt_number
+    sleep_for = (
+        f"; waiting {retry_state.next_action.sleep:.0f}s"
+        if retry_state.next_action and retry_state.next_action.sleep is not None
+        else ""
+    )
+    logger.warning(
+        "Terraform apply: retrying after Azure RequestConflict (attempt %d/5)%s",
+        attempt,
+        sleep_for,
+    )
+
+
 def configure_logging() -> None:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
-
-
-def _run(cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
-    """
-    Wrapper around subprocess.run that always surfaces stdout/stderr when a command fails.
-    """
-    kwargs.setdefault("text", True)
-    try:
-        return subprocess.run(cmd, check=True, **kwargs)
-    except subprocess.CalledProcessError as exc:
-        if exc.stdout:
-            sys.stdout.write(exc.stdout)
-        if exc.stderr:
-            sys.stderr.write(exc.stderr)
-        raise
 
 
 def resolve_paths() -> Paths:
@@ -109,18 +179,6 @@ def resolve_paths() -> Paths:
         config_dir=root / "config",
         toolkit_root=root / "apim-genai-gateway-toolkit" / "infra",
     )
-
-
-def read_env(path: Path) -> list[tuple[str, str]]:
-    pairs: list[tuple[str, str]] = []
-    with path.open() as handle:
-        for raw in handle:
-            line = raw.strip()
-            if line == "" or line.startswith("#") or "=" not in line:
-                continue
-            key, value = line.split("=", 1)
-            pairs.append((key, value))
-    return pairs
 
 
 def load_tfvars(tfvars_path: Path) -> dict[str, Any]:
@@ -162,13 +220,14 @@ def _log_tfvars_diff(
     if before is None:
         return
     try:
-        from deepdiff import DeepDiff
+        from deepdiff import DeepDiff  # type: ignore[import-not-found]
     except ImportError:
         logger.debug("DeepDiff not installed; skipping tfvars diff for %s", tfvars_path)
         return
     diff = DeepDiff(before, after, ignore_order=True)
     if diff:
-        logger.info("Updated tfvars %s: %s", tfvars_path.name, diff.to_json())
+        pretty = json.dumps(json.loads(diff.to_json()), indent=2, sort_keys=True)
+        logger.info("Updated tfvars %s:\n%s", tfvars_path.name, pretty)
 
 
 def _write_tfvars(tfvars_path: Path, data: dict[str, Any]) -> None:
@@ -249,13 +308,15 @@ def ensure_tfvars(
 
 
 def azure_context() -> AzureContext:
-    subscription_id = _run(
+    subscription_id = run_logged(
         ["az", "account", "show", "--query", "id", "-o", "tsv"],
         capture_output=True,
+        echo="on_error",
     ).stdout.strip()
-    tenant_id = _run(
+    tenant_id = run_logged(
         ["az", "account", "show", "--query", "tenantId", "-o", "tsv"],
         capture_output=True,
+        echo="on_error",
     ).stdout.strip()
     return AzureContext(subscription_id=subscription_id, tenant_id=tenant_id)
 
@@ -292,7 +353,7 @@ def export_foundation_tf_env(
 
 def terraform_init_local(stack_dir: Path, state_path: Path) -> None:
     state_path.parent.mkdir(parents=True, exist_ok=True)
-    _run(
+    run_logged(
         [
             "terraform",
             f"-chdir={stack_dir}",
@@ -303,6 +364,13 @@ def terraform_init_local(stack_dir: Path, state_path: Path) -> None:
     )
 
 
+@retry(
+    reraise=True,
+    retry=retry_if_exception_type(StorageRbacPropagationError),
+    stop=stop_after_attempt(8),
+    wait=wait_exponential(multiplier=1, min=2, max=30),
+    before_sleep=_log_storage_retry,
+)
 def terraform_init_remote(
     stack_dir: Path,
     *,
@@ -312,42 +380,60 @@ def terraform_init_remote(
     state_container: str,
     state_key: str,
 ) -> None:
-    _run(
-        [
-            "terraform",
-            f"-chdir={stack_dir}",
-            "init",
-            "-reconfigure",
-            "-backend-config=use_azuread_auth=true",
-            f"-backend-config=tenant_id={tenant_id}",
-            f"-backend-config=resource_group_name={state_rg}",
-            f"-backend-config=storage_account_name={state_sa}",
-            f"-backend-config=container_name={state_container}",
-            f"-backend-config=key={state_key}",
-        ],
-        stdout=sys.stdout,
-        stderr=sys.stderr,
-    )
+    try:
+        run_logged(
+            [
+                "terraform",
+                f"-chdir={stack_dir}",
+                "init",
+                "-reconfigure",
+                "-backend-config=use_azuread_auth=true",
+                f"-backend-config=tenant_id={tenant_id}",
+                f"-backend-config=resource_group_name={state_rg}",
+                f"-backend-config=storage_account_name={state_sa}",
+                f"-backend-config=container_name={state_container}",
+                f"-backend-config=key={state_key}",
+            ],
+            capture_output=True,
+            echo="always",
+        )
+    except subprocess.CalledProcessError as exc:
+        if _is_storage_rbac_error(exc):
+            raise StorageRbacPropagationError(str(exc)) from exc
+        raise
 
 
+@retry(
+    reraise=True,
+    retry=retry_if_exception_type(RequestConflictError),
+    stop=stop_after_attempt(5),
+    wait=wait_exponential(multiplier=1, min=5, max=60),
+    before_sleep=_log_apply_retry,
+)
 def terraform_apply(stack_dir: Path, tfvars_file: Path) -> None:
-    _run(
-        [
-            "terraform",
-            f"-chdir={stack_dir}",
-            "apply",
-            "-auto-approve",
-            f"-var-file={tfvars_file.name}",
-        ],
-        stdout=sys.stdout,
-        stderr=sys.stderr,
-    )
+    try:
+        run_logged(
+            [
+                "terraform",
+                f"-chdir={stack_dir}",
+                "apply",
+                "-auto-approve",
+                f"-var-file={tfvars_file.name}",
+            ],
+            capture_output=True,
+            echo="always",
+        )
+    except subprocess.CalledProcessError as exc:
+        if _is_request_conflict(exc) and not _is_fatal_apply_error(exc):
+            raise RequestConflictError(str(exc)) from exc
+        raise
 
 
 def terraform_output(stack_dir: Path) -> dict[str, Any]:
-    output = _run(
+    output = run_logged(
         ["terraform", f"-chdir={stack_dir}", "output", "-json"],
         capture_output=True,
+        echo="never",
     ).stdout
     return json.loads(output)
 

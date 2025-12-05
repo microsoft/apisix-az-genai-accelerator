@@ -4,14 +4,12 @@ import argparse
 import json
 import logging
 import os
-import re
 import secrets
 import subprocess
-import sys
 from pathlib import Path
 from typing import Any
 
-from gateway_ops._utils import ensure, run_logged
+from gateway_ops._utils import ensure, read_env, run_logged
 
 from ._deploy_common import (
     AzureContext,
@@ -27,7 +25,7 @@ from ._deploy_common import (
     load_bootstrap_state,
     load_foundation_state,
     load_observability_state,
-    read_env,
+    load_tfvars,
     resolve_paths,
     state_key,
     terraform_apply,
@@ -109,40 +107,43 @@ def deploy_workload(
     )
 
     export_foundation_tf_env(env, context, bootstrap, foundation)
-    os.environ["TF_VAR_log_analytics_workspace_id"] = (
-        observability.log_analytics_workspace_id
+    _set_env_vars(
+        {
+            "TF_VAR_log_analytics_workspace_id": (
+                observability.log_analytics_workspace_id
+            ),
+            "TF_VAR_azure_monitor_workspace_id": (
+                observability.azure_monitor_workspace_id
+            ),
+            "TF_VAR_azure_monitor_prometheus_endpoint": (
+                observability.azure_monitor_prometheus_remote_write_endpoint
+            ),
+            "TF_VAR_azure_monitor_prometheus_query_endpoint": (
+                observability.azure_monitor_prometheus_query_endpoint
+            ),
+            "TF_VAR_azure_monitor_prometheus_dcr_id": (
+                observability.azure_monitor_prometheus_dcr_id
+            ),
+            "TF_VAR_gateway_log_ingest_dce_id": (
+                observability.gateway_logs_dce_id or ""
+            ),
+            "TF_VAR_gateway_log_ingest_dcr_id": (
+                observability.gateway_logs_dcr_id or ""
+            ),
+            "TF_VAR_gateway_log_ingest_uri": (
+                observability.gateway_logs_ingest_uri or ""
+            ),
+            "TF_VAR_gateway_log_stream_name": (
+                observability.gateway_logs_stream_name or ""
+            ),
+            "TF_VAR_gateway_log_table_name": (
+                observability.gateway_logs_table_name or ""
+            ),
+            "TF_VAR_app_insights_connection_string": (
+                observability.app_insights_connection_string or None
+            ),
+        }
     )
-    os.environ["TF_VAR_azure_monitor_workspace_id"] = (
-        observability.azure_monitor_workspace_id
-    )
-    os.environ["TF_VAR_azure_monitor_prometheus_endpoint"] = (
-        observability.azure_monitor_prometheus_remote_write_endpoint
-    )
-    os.environ["TF_VAR_azure_monitor_prometheus_query_endpoint"] = (
-        observability.azure_monitor_prometheus_query_endpoint
-    )
-    os.environ["TF_VAR_azure_monitor_prometheus_dcr_id"] = (
-        observability.azure_monitor_prometheus_dcr_id
-    )
-    os.environ["TF_VAR_gateway_log_ingest_dce_id"] = (
-        observability.gateway_logs_dce_id or ""
-    )
-    os.environ["TF_VAR_gateway_log_ingest_dcr_id"] = (
-        observability.gateway_logs_dcr_id or ""
-    )
-    os.environ["TF_VAR_gateway_log_ingest_uri"] = (
-        observability.gateway_logs_ingest_uri or ""
-    )
-    os.environ["TF_VAR_gateway_log_stream_name"] = (
-        observability.gateway_logs_stream_name or ""
-    )
-    os.environ["TF_VAR_gateway_log_table_name"] = (
-        observability.gateway_logs_table_name or ""
-    )
-    if observability.app_insights_connection_string != "":
-        os.environ["TF_VAR_app_insights_connection_string"] = (
-            observability.app_insights_connection_string
-        )
 
     openai_info = (
         openai_state
@@ -253,6 +254,14 @@ def _sync_environment(env: str, key_vault: str, use_provisioned_openai: bool) ->
     run_logged(sync_cmd, capture_output=False)
 
 
+def _set_env_vars(values: dict[str, str | None]) -> None:
+    for key, value in values.items():
+        if value is None:
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = value
+
+
 def _configure_e2e(images: dict[str, str]) -> None:
     os.environ["TF_VAR_gateway_e2e_test_mode"] = "true"
 
@@ -306,21 +315,15 @@ def _images_from_tfvars(tfvars_path: Path, deploy_e2e: bool) -> dict[str, str]:
     if not tfvars_path.exists():
         raise FileNotFoundError(f"tfvars file not found: {tfvars_path}")
 
-    content = tfvars_path.read_text()
-
-    def read(key: str) -> str:
-        match = re.search(
-            rf'^{key}\s*=\s*"([^"]+)"', content, flags=re.MULTILINE | re.DOTALL
-        )
-        return match.group(1) if match else ""
+    data = load_tfvars(tfvars_path)
 
     images = {
-        "gateway": read("gateway_image"),
-        "hydrenv": read("hydrenv_image"),
+        "gateway": str(data.get("gateway_image", "")),
+        "hydrenv": str(data.get("hydrenv_image", "")),
     }
     if deploy_e2e:
-        images["gateway-config-api"] = read("config_api_image")
-        images["aoai-api-simulator"] = read("simulator_image")
+        images["gateway-config-api"] = str(data.get("config_api_image", ""))
+        images["aoai-api-simulator"] = str(data.get("simulator_image", ""))
 
     missing = [name for name, value in images.items() if value == ""]
     if missing:

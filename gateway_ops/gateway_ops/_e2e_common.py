@@ -212,6 +212,26 @@ def _locust_host(base_endpoint: str, endpoint_path: str) -> str:
     return f"{base}/{path}/"
 
 
+def run_scenario(
+    *,
+    test_file: str,
+    endpoint_path: str,
+    user_count: int,
+    run_time: str | None,
+    extra_env: dict[str, str] | None = None,
+    base_env: dict[str, str] | None = None,
+) -> None:
+    env = base_env or build_test_environment()
+    run_locust(
+        test_file=test_file,
+        endpoint_path=endpoint_path,
+        user_count=user_count,
+        run_time=run_time,
+        extra_env=extra_env,
+        base_env=env,
+    )
+
+
 def run_locust(
     *,
     test_file: str,

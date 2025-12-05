@@ -117,14 +117,15 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "high_5xx_rate" {
 
   criteria {
     query = <<-QUERY
-      ContainerAppConsoleLogs_CL
-      | where ContainerAppName_s == "${var.gateway_app_name}"
-      | where Log_s has "request_id"
-      | extend LogJson = parse_json(Log_s)
-      | extend Status = toint(LogJson.response.status)
-      | summarize 
+      APISIXGatewayLogs_CL
+      | extend RequestId = tostring(column_ifexists("RequestId_s", ""))
+      | extend StatusRaw = column_ifexists("ResponseCode_d", column_ifexists("ResponseCode_s", ""))
+      | extend Status = toint(StatusRaw)
+      | where isnotempty(RequestId)
+      | summarize
           TotalRequests = count(),
           ErrorRequests = countif(Status >= 500)
+          by bin(TimeGenerated, 5m)
       | extend ErrorRate = (ErrorRequests * 100.0) / TotalRequests
       | where ErrorRate > ${var.alert_5xx_threshold_percent}
     QUERY
@@ -171,14 +172,15 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "high_429_rate" {
 
   criteria {
     query = <<-QUERY
-      ContainerAppConsoleLogs_CL
-      | where ContainerAppName_s == "${var.gateway_app_name}"
-      | where Log_s has "request_id"
-      | extend LogJson = parse_json(Log_s)
-      | extend Status = toint(LogJson.response.status)
-      | summarize 
+      APISIXGatewayLogs_CL
+      | extend RequestId = tostring(column_ifexists("RequestId_s", ""))
+      | extend StatusRaw = column_ifexists("ResponseCode_d", column_ifexists("ResponseCode_s", ""))
+      | extend Status = toint(StatusRaw)
+      | where isnotempty(RequestId)
+      | summarize
           TotalRequests = count(),
           ThrottledRequests = countif(Status == 429)
+          by bin(TimeGenerated, 5m)
       | extend ThrottleRate = (ThrottledRequests * 100.0) / TotalRequests
       | where ThrottleRate > ${var.alert_429_threshold_percent}
     QUERY
@@ -225,12 +227,11 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "high_latency_p95" {
 
   criteria {
     query = <<-QUERY
-      ContainerAppConsoleLogs_CL
-      | where ContainerAppName_s == "${var.gateway_app_name}"
-      | where Log_s has "request_id"
-      | extend LogJson = parse_json(Log_s)
-      | extend RequestTime = todouble(LogJson.request.time)
-      | summarize P95 = percentile(RequestTime, 95)
+      APISIXGatewayLogs_CL
+      | extend RequestId = tostring(column_ifexists("RequestId_s", ""))
+      | extend RequestTimeMs = todouble(column_ifexists("TotalTime_d", column_ifexists("TotalTime_s", "")))
+      | where isnotempty(RequestId)
+      | summarize P95 = percentile(RequestTimeMs, 95) by bin(TimeGenerated, 5m)
       | where P95 > ${var.alert_latency_p95_threshold_ms}
     QUERY
 
@@ -276,10 +277,10 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "no_traffic" {
 
   criteria {
     query = <<-QUERY
-      ContainerAppConsoleLogs_CL
-      | where ContainerAppName_s == "${var.gateway_app_name}"
-      | where Log_s has "request_id"
-      | summarize RequestCount = count()
+      APISIXGatewayLogs_CL
+      | extend RequestId = tostring(column_ifexists("RequestId_s", ""))
+      | where isnotempty(RequestId)
+      | summarize RequestCount = count() by bin(TimeGenerated, 5m)
       | where RequestCount == 0
     QUERY
 

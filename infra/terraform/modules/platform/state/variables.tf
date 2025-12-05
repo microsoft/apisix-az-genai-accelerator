@@ -1,5 +1,5 @@
 /// Module: platform/state
-/// Purpose: Remote state storage account, resource group, RBAC, and optional private endpoint
+/// Purpose: Remote state storage account, resource group, and RBAC
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Core identity & location
@@ -64,12 +64,6 @@ variable "soft_delete_retention_days" {
 # Network & access control
 # ─────────────────────────────────────────────────────────────────────────────
 
-variable "enable_state_sa_private_endpoint" {
-  description = "Create private endpoint for state storage account"
-  type        = bool
-  default     = false
-}
-
 variable "allowed_public_ip_addresses" {
   description = "List of public IPv4 addresses permitted to access the state storage account (exact IP matches)."
   type        = list(string)
@@ -78,16 +72,6 @@ variable "allowed_public_ip_addresses" {
   validation {
     condition     = alltrue([for ip in var.allowed_public_ip_addresses : can(cidrhost("${ip}/32", 0))])
     error_message = "Each allowed public IP address must be a valid IPv4 address."
-  }
-}
-
-variable "private_link_subnet_id" {
-  description = "Subnet ID for private endpoints (required if enable_state_sa_private_endpoint=true)"
-  type        = string
-  default     = ""
-  validation {
-    condition     = can(regex("^/subscriptions/.*/resourceGroups/.*/providers/Microsoft.Network/virtualNetworks/.*/subnets/.*$", var.private_link_subnet_id)) || var.private_link_subnet_id == ""
-    error_message = "private_link_subnet_id must be a valid Azure subnet resource ID or empty string"
   }
 }
 

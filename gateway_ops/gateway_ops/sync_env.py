@@ -5,7 +5,6 @@ import json
 import logging
 import subprocess
 import sys
-from pathlib import Path
 
 from ._deploy_common import (
     AzureContext,
@@ -18,21 +17,9 @@ from ._deploy_common import (
     resolve_paths,
 )
 from ._openai_secrets import seed_openai_secrets, set_secret_with_retry
-from ._utils import ensure, repo_root, run_logged
+from ._utils import ensure, read_env, repo_root, run_logged
 
 logger = logging.getLogger(__name__)
-
-
-def read_env(path: Path) -> list[tuple[str, str]]:
-    pairs: list[tuple[str, str]] = []
-    with path.open() as handle:
-        for raw in handle:
-            line = raw.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, value = line.split("=", 1)
-            pairs.append((key, value))
-    return pairs
 
 
 def resolve_key_vault(env: str, override: str) -> str:
@@ -187,7 +174,9 @@ def main(argv: list[str] | None = None) -> int:
 
     openai_secret_names = _infer_openai_secret_names(app_settings)
     should_seed_openai = (
-        paths.foundry.exists() or args.use_provisioned_openai or len(openai_secret_names) > 0
+        paths.foundry.exists()
+        or args.use_provisioned_openai
+        or len(openai_secret_names) > 0
     )
     if should_seed_openai:
         summary = seed_openai_secrets(

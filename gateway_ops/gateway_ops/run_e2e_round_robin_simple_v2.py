@@ -2,17 +2,16 @@ from __future__ import annotations
 
 import logging
 
-from ._e2e_common import build_test_environment, run_locust
+from ._e2e_common import run_scenario
 
 
 def run(*, base_env: dict[str, str] | None = None) -> None:
-    env = base_env or build_test_environment()
-    run_locust(
+    run_scenario(
         test_file="scenario_round_robin.py",
         endpoint_path="round-robin-simple-v2",
         user_count=2,
         run_time="3m",
-        base_env=env,
+        base_env=base_env,
     )
 
 

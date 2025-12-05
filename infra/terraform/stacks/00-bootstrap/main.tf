@@ -15,12 +15,10 @@ module "state" {
   workload_name    = var.workload_name
   identifier       = var.identifier
 
-  sa_replication_type              = var.sa_replication_type
-  soft_delete_retention_days       = var.soft_delete_retention_days
-  enable_state_sa_private_endpoint = var.enable_state_sa_private_endpoint
-  private_link_subnet_id           = var.private_link_subnet_id
-  state_rg_name_override           = var.state_rg_name_override
-  allowed_public_ip_addresses      = module.public_ip.public_ip == "" ? [] : [module.public_ip.public_ip]
+  sa_replication_type         = var.sa_replication_type
+  soft_delete_retention_days  = var.soft_delete_retention_days
+  state_rg_name_override      = var.state_rg_name_override
+  allowed_public_ip_addresses = module.public_ip.public_ip == "" ? [] : [module.public_ip.public_ip]
 
   tags = var.tags
 }

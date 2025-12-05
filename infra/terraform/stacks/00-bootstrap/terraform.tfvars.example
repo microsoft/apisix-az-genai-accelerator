@@ -9,32 +9,26 @@
 
 # Required subscription/tenant identifiers
 subscription_id = "00000000-0000-0000-0000-000000000000"
-tenant_id        = "11111111-1111-1111-1111-111111111111"
+tenant_id       = "11111111-1111-1111-1111-111111111111"
 
 # Short environment code used in naming (lowercase, no spaces)
 environment_code = "dev"
 
 # Azure region where the bootstrap resources (state storage) will live
-location         = "eastus"
+location = "eastus"
 
 # Optional workload prefix that feeds naming. Leave as "apisix" unless you
 # have a multi-solution deployment.
-workload_name    = "apisix"
+workload_name = "apisix"
 
 # Optional naming suffix to disambiguate shared environments.
-identifier       = ""
+identifier = ""
 
 # Storage account replication; LRS is usually sufficient for state.
 sa_replication_type = "LRS"
 
 # Soft delete retention for Terraform state blobs.
 soft_delete_retention_days = 30
-
-# Provide a subnet ID if you require a private endpoint for the state account.
-private_link_subnet_id = ""
-
-# Toggle to create a private endpoint to the state storage account.
-enable_state_sa_private_endpoint = false
 
 # Override the auto-generated state resource group name (rarely needed).
 state_rg_name_override = ""
