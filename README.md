@@ -6,7 +6,7 @@ Tired of HTTP **429** throttling turning your agentic apps and coding agents wit
 
 This works because **Azure OpenAI capacity and rate limits are largely scoped by region in practice** → using multiple regions effectively gives you multiple capacity pools. See: **[Quotas, regions, and deployments (Azure OpenAI / Foundry)](docs/azure-openai-quotas-regions-deployments.md)**.
 
-**TL;DR -** This is an Apache APISIX-based, full featured high‑performance Layer‑7 API gateway built on Nginx/OpenResty with full APIM-parity.
+> [!NOTE] > **TL;DR:** This is an Apache APISIX-based, full featured high‑performance Layer‑7 API gateway built on Nginx/OpenResty with full APIM-parity.
 
 ---
 
