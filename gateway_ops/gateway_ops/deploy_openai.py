@@ -23,6 +23,8 @@ from ._deploy_common import (
     terraform_init_remote,
     update_tfvars,
 )
+from .sync_env import ensure_kv_secrets_officer
+from ._openai_secrets import seed_openai_secrets
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +89,27 @@ def deploy_foundry(
         state_key=openai_state_key,
     )
     terraform_apply(paths.foundry, tfvars_file)
+    ensure_kv_secrets_officer(foundation.key_vault_name)
+    seed_summary = seed_openai_secrets(
+        env,
+        foundation.key_vault_name,
+        allow_placeholders=False,
+        ctx=context,
+        bootstrap_state=bootstrap,
+        paths=paths,
+    )
+    if len(seed_summary["seeded"]) == 0:
+        logger.warning(
+            "Foundry apply succeeded but no OpenAI secrets were seeded into %s; "
+            "rerun sync-env after verifying terraform outputs",
+            foundation.key_vault_name,
+        )
+    else:
+        logger.info(
+            "Seeded %d Azure OpenAI secrets into Key Vault %s",
+            len(seed_summary["seeded"]),
+            foundation.key_vault_name,
+        )
 
     os.environ["TF_VAR_use_provisioned_azure_openai"] = "true"
     os.environ["TF_VAR_openai_state_blob_key"] = openai_state_key
