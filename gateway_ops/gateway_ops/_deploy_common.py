@@ -123,6 +123,8 @@ def _is_request_conflict(exc: subprocess.CalledProcessError) -> bool:
         "response 400" in lowered
         or "invalidresource" in lowered
         or "insufficientquota" in lowered
+        or "flagmustbesetforrestore" in lowered
+        or "soft-deleted" in lowered
     ):
         return False
     return (
@@ -143,6 +145,8 @@ def _is_fatal_apply_error(exc: subprocess.CalledProcessError) -> bool:
         "insufficientquota",
         "insufficient quota",
         "quota limit",
+        "flagmustbesetforrestore",
+        "soft-deleted",
     )
     return any(marker in lowered for marker in fatal_markers)
 
