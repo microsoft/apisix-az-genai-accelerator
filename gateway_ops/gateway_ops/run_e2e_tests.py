@@ -12,6 +12,8 @@ from . import (
     run_e2e_round_robin_simple_v2,
     run_e2e_round_robin_weighted,
     run_e2e_round_robin_weighted_v2,
+    run_e2e_scalability,
+    run_e2e_scalability_burst,
     run_e2e_usage_tracking,
 )
 from ._e2e_common import build_test_environment
@@ -26,6 +28,8 @@ SCENARIO_RUNNERS = {
     "manage-spikes-with-payg-v2": run_e2e_manage_spikes_with_payg_v2.run,
     "usage-tracking": run_e2e_usage_tracking.run,
     "prioritization": run_e2e_prioritization.run,
+    "scalability": run_e2e_scalability.run,
+    "scalability-burst": run_e2e_scalability_burst.run,
 }
 
 

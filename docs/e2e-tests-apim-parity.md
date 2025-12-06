@@ -105,6 +105,20 @@ Validates in-request failover semantics under stress:
 - backend selection shifts as conditions change
 - logs/metrics show backend identifiers and request counts
 
+### `scalability`
+
+Validates autoscaling behavior on ACA:
+
+- generates high concurrent load with a fixed Locust profile (180 users, spawn 20/s, 15m)
+- asserts the gateway container app scales replicas above the configured minimum using Azure Monitor `Replicas` / `ReplicaCount` metrics
+
+### `scalability-burst`
+
+Heavier burst profile to prove headroom:
+
+- 260 users, spawn 40/s, 20m sustained run
+- requires replicas to climb at least two above the configured minimum
+
 ---
 
 ## Sample run output (logs)

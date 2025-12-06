@@ -223,16 +223,28 @@ variable "gateway_memory" {
   default     = "1Gi"
 }
 
+variable "gateway_http_concurrency" {
+  description = "Target concurrent HTTP requests per replica before scaling out"
+  type        = number
+  default     = 60
+}
+
+variable "gateway_cpu_scale_threshold" {
+  description = "Average CPU utilization percentage that triggers scale out"
+  type        = number
+  default     = 70
+}
+
 variable "gateway_min_replicas" {
   description = "Minimum number of gateway replicas"
   type        = number
-  default     = 1
+  default     = 2
 }
 
 variable "gateway_max_replicas" {
   description = "Maximum number of gateway replicas"
   type        = number
-  default     = 3
+  default     = 20
 }
 
 # ─────────────────────────────────────────────────────────────────────────────

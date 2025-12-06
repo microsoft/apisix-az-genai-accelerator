@@ -323,6 +323,20 @@ resource "azurerm_container_app" "gateway" {
     # Scaling configuration
     min_replicas = var.gateway_min_replicas
     max_replicas = var.gateway_max_replicas
+
+    http_scale_rule {
+      name                = "http-concurrency"
+      concurrent_requests = var.gateway_http_concurrency
+    }
+
+    custom_scale_rule {
+      name             = "cpu-guardrail"
+      custom_rule_type = "cpu"
+      metadata = {
+        type  = "Utilization"
+        value = tostring(var.gateway_cpu_scale_threshold)
+      }
+    }
   }
 
   tags = local.common_tags

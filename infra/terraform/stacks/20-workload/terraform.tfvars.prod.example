@@ -433,12 +433,14 @@ secrets = {
 gateway_image = ""
 hydrenv_image = ""
 
-expose_gateway_public = true
-gateway_target_port   = 9080
-gateway_cpu           = 1.0
-gateway_memory        = "2Gi"
-gateway_min_replicas  = 1
-gateway_max_replicas  = 3
+expose_gateway_public       = true
+gateway_target_port         = 9080
+gateway_cpu                 = 1.0
+gateway_memory              = "2Gi"
+gateway_http_concurrency    = 60
+gateway_cpu_scale_threshold = 70
+gateway_min_replicas        = 2
+gateway_max_replicas        = 20
 
 otel_collector_cpu    = 0.25
 otel_collector_memory = "0.5Gi"

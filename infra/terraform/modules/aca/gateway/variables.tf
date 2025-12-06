@@ -186,10 +186,30 @@ variable "gateway_memory" {
   default     = "1Gi"
 }
 
+variable "gateway_http_concurrency" {
+  description = "Target concurrent HTTP requests per replica before scaling out"
+  type        = number
+  default     = 60
+  validation {
+    condition     = var.gateway_http_concurrency > 0 && var.gateway_http_concurrency <= 1000
+    error_message = "gateway_http_concurrency must be between 1 and 1000 requests per replica"
+  }
+}
+
+variable "gateway_cpu_scale_threshold" {
+  description = "Average CPU utilization percentage that triggers scale out"
+  type        = number
+  default     = 70
+  validation {
+    condition     = var.gateway_cpu_scale_threshold > 0 && var.gateway_cpu_scale_threshold <= 100
+    error_message = "gateway_cpu_scale_threshold must be between 1 and 100"
+  }
+}
+
 variable "gateway_min_replicas" {
   description = "Minimum number of gateway replicas"
   type        = number
-  default     = 1
+  default     = 2
   validation {
     condition     = var.gateway_min_replicas >= 0
     error_message = "gateway_min_replicas must be >= 0"
@@ -199,7 +219,7 @@ variable "gateway_min_replicas" {
 variable "gateway_max_replicas" {
   description = "Maximum number of gateway replicas"
   type        = number
-  default     = 3
+  default     = 20
   validation {
     condition     = var.gateway_max_replicas >= var.gateway_min_replicas
     error_message = "gateway_max_replicas must be >= gateway_min_replicas"

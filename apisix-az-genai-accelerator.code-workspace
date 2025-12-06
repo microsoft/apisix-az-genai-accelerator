@@ -41,11 +41,8 @@
       "docs/",
       "apim-genai-gateway-toolkit/",
       "aoai-api-simulator/",
-      "DEPLOYING.md",
       "ROADMAP.md",
-      "AGENTS.md",
-      "grafana-dashboard/",
-      "config/"
+      "AGENTS.md"
     ]
   }
 }

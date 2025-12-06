@@ -150,6 +150,7 @@ def build_test_environment() -> dict[str, str]:
     outputs = _terraform_outputs()
 
     gateway_url = str(_output_value(outputs, "gateway_url")).rstrip("/")
+    gateway_app_name = str(_output_value(outputs, "gateway_app_name"))
     resource_group_name = str(_output_value(outputs, "resource_group_name"))
     workspace_resource_id = str(_output_value(outputs, "log_analytics_workspace_id"))
     workspace_id, workspace_name = _workspace_info(workspace_resource_id)
@@ -187,6 +188,8 @@ def build_test_environment() -> dict[str, str]:
         "TENANT_ID": tenant_id,
         "SUBSCRIPTION_ID": subscription_id,
         "RESOURCE_GROUP_NAME": resource_group_name,
+        "GATEWAY_APP_NAME": gateway_app_name,
+        "GATEWAY_APP_RESOURCE_ID": f"/subscriptions/{subscription_id}/resourceGroups/{resource_group_name}/providers/Microsoft.App/containerApps/{gateway_app_name}",
         "OTEL_SERVICE_NAME": "locust",
         "OTEL_METRIC_EXPORT_INTERVAL": "10000",
         "LOCUST_WEB_PORT": "8091",
@@ -206,6 +209,7 @@ def run_scenario(
     endpoint_path: str,
     user_count: int,
     run_time: str | None,
+    spawn_rate: float | None = None,
     extra_env: dict[str, str] | None = None,
     base_env: dict[str, str] | None = None,
 ) -> None:
@@ -215,6 +219,7 @@ def run_scenario(
         endpoint_path=endpoint_path,
         user_count=user_count,
         run_time=run_time,
+        spawn_rate=spawn_rate,
         extra_env=extra_env,
         base_env=env,
     )
@@ -226,6 +231,7 @@ def run_locust(
     endpoint_path: str,
     user_count: int,
     run_time: str | None,
+    spawn_rate: float | None = None,
     extra_env: dict[str, str] | None = None,
     base_env: dict[str, str] | None = None,
 ) -> None:
@@ -254,6 +260,8 @@ def run_locust(
                 f"run_time must be provided when user_count is non-negative for {endpoint_path}"
             )
         cmd.extend(["--users", str(user_count), "--run-time", run_time])
+        if spawn_rate is not None:
+            cmd.extend(["--spawn-rate", str(spawn_rate)])
 
     logger.info(
         "Running locust scenario '%s' (users=%s, run_time=%s)",

@@ -256,12 +256,14 @@ module "gateway" {
   secret_names                  = local.final_secret_names
 
   # Gateway configuration
-  expose_gateway_public = var.expose_gateway_public
-  gateway_target_port   = var.gateway_target_port
-  gateway_cpu           = var.gateway_cpu
-  gateway_memory        = var.gateway_memory
-  gateway_min_replicas  = var.gateway_min_replicas
-  gateway_max_replicas  = var.gateway_max_replicas
+  expose_gateway_public       = var.expose_gateway_public
+  gateway_target_port         = var.gateway_target_port
+  gateway_cpu                 = var.gateway_cpu
+  gateway_memory              = var.gateway_memory
+  gateway_http_concurrency    = var.gateway_http_concurrency
+  gateway_cpu_scale_threshold = var.gateway_cpu_scale_threshold
+  gateway_min_replicas        = var.gateway_min_replicas
+  gateway_max_replicas        = var.gateway_max_replicas
 
   # Observability
   log_analytics_workspace_id        = module.env.law_id
