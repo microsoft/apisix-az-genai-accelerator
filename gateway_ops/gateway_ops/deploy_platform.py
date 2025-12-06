@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import logging
-import os
 
 from gateway_ops._utils import ensure
 
@@ -61,9 +60,6 @@ def deploy_platform(
     )
 
     export_core_tf_env(env, context)
-    os.environ["TF_VAR_log_analytics_workspace_id"] = (
-        observability.log_analytics_workspace_id
-    )
 
     logger.info("==> 10-platform")
     terraform_init_remote(

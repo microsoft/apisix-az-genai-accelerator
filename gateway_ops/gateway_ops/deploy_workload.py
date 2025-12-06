@@ -97,6 +97,7 @@ def deploy_workload(
             "gateway_log_ingest_uri": observability.gateway_logs_ingest_uri or "",
             "gateway_log_stream_name": observability.gateway_logs_stream_name or "",
             "gateway_log_table_name": observability.gateway_logs_table_name or "",
+            "app_insights_connection_string": observability.app_insights_connection_string,
             # platform handoff (ensure current values)
             "key_vault_name": foundation.key_vault_name,
             "aca_managed_identity_id": foundation.aca_identity_id,
@@ -106,43 +107,6 @@ def deploy_workload(
     )
 
     export_foundation_tf_env(env, context, bootstrap, foundation)
-    _set_env_vars(
-        {
-            "TF_VAR_log_analytics_workspace_id": (
-                observability.log_analytics_workspace_id
-            ),
-            "TF_VAR_azure_monitor_workspace_id": (
-                observability.azure_monitor_workspace_id
-            ),
-            "TF_VAR_azure_monitor_prometheus_endpoint": (
-                observability.azure_monitor_prometheus_remote_write_endpoint
-            ),
-            "TF_VAR_azure_monitor_prometheus_query_endpoint": (
-                observability.azure_monitor_prometheus_query_endpoint
-            ),
-            "TF_VAR_azure_monitor_prometheus_dcr_id": (
-                observability.azure_monitor_prometheus_dcr_id
-            ),
-            "TF_VAR_gateway_log_ingest_dce_id": (
-                observability.gateway_logs_dce_id or ""
-            ),
-            "TF_VAR_gateway_log_ingest_dcr_id": (
-                observability.gateway_logs_dcr_id or ""
-            ),
-            "TF_VAR_gateway_log_ingest_uri": (
-                observability.gateway_logs_ingest_uri or ""
-            ),
-            "TF_VAR_gateway_log_stream_name": (
-                observability.gateway_logs_stream_name or ""
-            ),
-            "TF_VAR_gateway_log_table_name": (
-                observability.gateway_logs_table_name or ""
-            ),
-            "TF_VAR_app_insights_connection_string": (
-                observability.app_insights_connection_string or None
-            ),
-        }
-    )
 
     openai_info = (
         openai_state
@@ -157,12 +121,21 @@ def deploy_workload(
         )
     )
     if openai_info.provisioned:
-        os.environ["TF_VAR_use_provisioned_azure_openai"] = "true"
-        if openai_info.state_blob_key:
-            os.environ["TF_VAR_openai_state_blob_key"] = openai_info.state_blob_key
+        update_tfvars(
+            tfvars_file,
+            {
+                "use_provisioned_azure_openai": True,
+                "openai_state_blob_key": openai_info.state_blob_key,
+            },
+        )
     else:
-        os.environ["TF_VAR_use_provisioned_azure_openai"] = "false"
-        os.environ.pop("TF_VAR_openai_state_blob_key", None)
+        update_tfvars(
+            tfvars_file,
+            {
+                "use_provisioned_azure_openai": False,
+                "openai_state_blob_key": "",
+            },
+        )
 
     _seed_secrets_and_openai(
         env, tfvars_file, foundation.key_vault_name, openai_info.provisioned, paths
@@ -182,13 +155,27 @@ def deploy_workload(
         if no_image_build
         else _build_images(deploy_e2e, local_docker)
     )
-    os.environ["TF_VAR_gateway_image"] = images["gateway"]
-    os.environ["TF_VAR_hydrenv_image"] = images["hydrenv"]
+    update_tfvars(
+        tfvars_file,
+        {
+            "gateway_image": images["gateway"],
+            "hydrenv_image": images["hydrenv"],
+        },
+    )
 
     if deploy_e2e:
-        _configure_e2e(images)
+        _configure_e2e(tfvars_file, images)
     else:
-        os.environ["TF_VAR_gateway_e2e_test_mode"] = "false"
+        update_tfvars(
+            tfvars_file,
+            {
+                "gateway_e2e_test_mode": False,
+                "config_api_shared_secret": "",
+                "config_api_image": "",
+                "simulator_image": "",
+                "simulator_api_key": "",
+            },
+        )
 
     export_foundation_tf_env(env, context, bootstrap, foundation)
 
@@ -201,6 +188,7 @@ def deploy_workload(
         state_container=bootstrap.container,
         state_key=state_key(bootstrap.state_prefix, "20-workload"),
     )
+    _validate_required_inputs(tfvars_file)
     terraform_apply(paths.workload, tfvars_file)
 
     if deploy_e2e:
@@ -296,32 +284,55 @@ def _seed_secrets_and_openai(
         )
 
 
-def _set_env_vars(values: dict[str, str | None]) -> None:
-    for key, value in values.items():
-        if value is None:
-            os.environ.pop(key, None)
-        else:
-            os.environ[key] = value
+def _validate_required_inputs(tfvars_file: Path) -> None:
+    data = load_tfvars(tfvars_file)
+    required = {
+        "log_analytics_workspace_id": "Log Analytics workspace ID",
+        "azure_monitor_workspace_id": "Azure Monitor workspace ID",
+        "azure_monitor_prometheus_endpoint": "Azure Monitor Prometheus endpoint",
+        "app_insights_connection_string": "Application Insights connection string",
+        "gateway_image": "gateway image",
+        "hydrenv_image": "hydrenv image",
+    }
+    missing = [
+        label for key, label in required.items() if not str(data.get(key, "")).strip()
+    ]
+    if missing:
+        raise RuntimeError(
+            f"Missing required values in {tfvars_file.name}: {', '.join(missing)}. "
+            "Run the earlier stages (observability/platform) or regenerate tfvars before apply."
+        )
 
 
-def _configure_e2e(images: dict[str, str]) -> None:
-    os.environ["TF_VAR_gateway_e2e_test_mode"] = "true"
-
+def _configure_e2e(tfvars_file: Path, images: dict[str, str]) -> None:
     config_api_secret = os.environ.get("CONFIG_API_SHARED_SECRET", "")
     if config_api_secret == "":
         config_api_secret = secrets.token_hex(16)
         logger.info("Generated CONFIG_API_SHARED_SECRET for test mode")
-    os.environ["TF_VAR_config_api_shared_secret"] = config_api_secret
-    os.environ["TF_VAR_config_api_image"] = images["gateway-config-api"]
 
-    os.environ["TF_VAR_simulator_image"] = images["aoai-api-simulator"]
     simulator_api_key = os.environ.get("SIMULATOR_API_KEY", "")
     if simulator_api_key == "":
         simulator_api_key = secrets.token_hex(16)
         logger.info("Generated SIMULATOR_API_KEY for test mode: %s", simulator_api_key)
-    os.environ["TF_VAR_simulator_api_key"] = simulator_api_key
-    simulator_port = os.environ.get("SIMULATOR_PORT", "8000")
-    os.environ["TF_VAR_simulator_port"] = simulator_port
+    simulator_port_str = os.environ.get("SIMULATOR_PORT", "8000")
+    try:
+        simulator_port = int(simulator_port_str)
+    except ValueError:
+        raise RuntimeError(
+            f"SIMULATOR_PORT must be an integer; got '{simulator_port_str}'."
+        )
+
+    update_tfvars(
+        tfvars_file,
+        {
+            "gateway_e2e_test_mode": True,
+            "config_api_shared_secret": config_api_secret,
+            "config_api_image": images["gateway-config-api"],
+            "simulator_image": images["aoai-api-simulator"],
+            "simulator_api_key": simulator_api_key,
+            "simulator_port": simulator_port,
+        },
+    )
 
 
 def _build_images(deploy_e2e: bool, local_docker: bool) -> dict[str, str]:

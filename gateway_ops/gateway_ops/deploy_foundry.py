@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import logging
-import os
 
 from gateway_ops._utils import ensure
 
@@ -42,12 +41,10 @@ def deploy_foundry(
 
     if skip:
         logger.info("Skipping 15-foundry (flagged to skip)")
-        os.environ["TF_VAR_use_provisioned_azure_openai"] = "false"
         return FoundryState(provisioned=False, state_blob_key=None)
 
     if not paths.foundry.exists():
         logger.info("15-foundry stack missing; skipping")
-        os.environ["TF_VAR_use_provisioned_azure_openai"] = "false"
         return FoundryState(provisioned=False, state_blob_key=None)
 
     bootstrap = (
@@ -109,8 +106,6 @@ def deploy_foundry(
             foundation.key_vault_name,
         )
 
-    os.environ["TF_VAR_use_provisioned_azure_openai"] = "true"
-    os.environ["TF_VAR_openai_state_blob_key"] = openai_state_key
     return FoundryState(provisioned=True, state_blob_key=openai_state_key)
 
 

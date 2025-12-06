@@ -332,22 +332,6 @@ def export_foundation_tf_env(
     env: str, ctx: AzureContext, bootstrap: BootstrapState, foundation: FoundationState
 ) -> None:
     export_core_tf_env(env, ctx)
-    os.environ["TF_VAR_location"] = foundation.location
-    os.environ["TF_VAR_platform_resource_group_name"] = (
-        foundation.platform_resource_group
-    )
-    os.environ["TF_VAR_platform_acr_name"] = foundation.acr_name
-    os.environ["TF_VAR_state_resource_group_name"] = bootstrap.resource_group
-    os.environ["TF_VAR_state_storage_account_name"] = bootstrap.storage_account
-    os.environ["TF_VAR_state_container_name"] = bootstrap.container
-    os.environ["TF_VAR_remote_state_resource_group_name"] = bootstrap.resource_group
-    os.environ["TF_VAR_remote_state_storage_account_name"] = bootstrap.storage_account
-    os.environ["TF_VAR_remote_state_container_name"] = bootstrap.container
-    os.environ["TF_VAR_foundation_state_blob_key"] = state_key(
-        bootstrap.state_prefix, "10-platform"
-    )
-    os.environ["TF_VAR_key_vault_name"] = foundation.key_vault_name
-    os.environ["TF_VAR_aca_managed_identity_id"] = foundation.aca_identity_id
 
 
 def terraform_init_local(stack_dir: Path, state_path: Path) -> None:
