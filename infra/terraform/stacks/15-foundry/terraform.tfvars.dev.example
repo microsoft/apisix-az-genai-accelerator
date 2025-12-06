@@ -33,6 +33,32 @@ azure_openai_instances = [
         capacity   = 150
       }
     ]
+  },
+  {
+    name_suffix = "secondary"
+    location    = "eastus2"
+    priority    = 5
+    weight      = 1
+    deployments = [
+      {
+        name = "gpt-5-mini"
+        model = {
+          name    = "gpt-5-mini"
+          version = "2025-08-07"
+        }
+        scale_type = "DataZoneStandard"
+        capacity   = 150
+      },
+      {
+        name = "text-embedding-3-small"
+        model = {
+          name    = "text-embedding-3-small"
+          version = "1"
+        }
+        scale_type = "Standard"
+        capacity   = 150
+      }
+    ]
   }
 ]
 
