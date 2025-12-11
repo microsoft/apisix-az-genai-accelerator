@@ -57,7 +57,7 @@ This returns the latest rendered-template logs (render count, Key Vault enrichme
 
 ## How to work here
 
-- Use `uv run` helpers under `gateway_ops` for builds and deploys (e.g., `uv run python -m gateway_ops.build_images …`, `uv run python -m gateway_ops.deploy_gateway …`).
+- Use `uv run` helpers under `ops` for builds and deploys (e.g., `uv run python -m ops.build_images …`, `uv run python -m ops.deploy_gateway …`).
 - Don’t edit submodules unless explicitly approved.
 
 ## Running the prioritization E2E test
@@ -68,6 +68,6 @@ This returns the latest rendered-template logs (render count, Key Vault enrichme
 
 ## Quick checklist
 
-- Build/deploy: `uv run python -m gateway_ops.build_images …` and related `uv run` commands only.
+- Build/deploy: `uv run python -m ops.build_images …` and related `uv run` commands only.
 - Tests: pass `LOG_ANALYTICS_TABLE=APISIXGatewayLogs_CL` for prioritization runs.
 - No changes in submodules without approval.

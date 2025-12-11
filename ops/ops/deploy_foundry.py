@@ -3,8 +3,6 @@ from __future__ import annotations
 import argparse
 import logging
 
-from gateway_ops._utils import ensure
-
 from ._deploy_common import (
     AzureContext,
     BootstrapState,
@@ -23,6 +21,7 @@ from ._deploy_common import (
     update_tfvars,
 )
 from ._openai_secrets import seed_openai_secrets
+from ._utils import ensure
 
 logger = logging.getLogger(__name__)
 

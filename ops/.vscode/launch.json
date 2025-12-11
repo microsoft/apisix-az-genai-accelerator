@@ -5,28 +5,28 @@
       "name": "build_images dev",
       "type": "debugpy",
       "request": "launch",
-      "module": "gateway_ops.build_images",
+      "module": "ops.build_images",
       "args": ["--local-docker", "--registry", "acrapisixplatformdeveusk0bb5r"]
     },
     {
       "name": "deploy_gateway dev",
       "type": "debugpy",
       "request": "launch",
-      "module": "gateway_ops.deploy_gateway",
+      "module": "ops.deploy_gateway",
       "args": ["--local-docker", "dev"]
     },
     {
       "name": "grant-kv-access dev",
       "type": "debugpy",
       "request": "launch",
-      "module": "gateway_ops.grant_kv_access",
+      "module": "ops.grant_kv_access",
       "args": ["kv-apisix-kv-dev-eus-is0"]
     },
     {
       "name": "sync-env dev",
       "type": "debugpy",
       "request": "launch",
-      "module": "gateway_ops.sync_env",
+      "module": "ops.sync_env",
       "args": ["--key-vault", "kv-apisix-kv-dev-eus-is0", "dev"]
     }
   ]

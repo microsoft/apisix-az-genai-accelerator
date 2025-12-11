@@ -9,9 +9,6 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from gateway_ops._openai_secrets import seed_openai_secrets, set_secret_with_retry
-from gateway_ops._utils import ensure, run_logged
-
 from ._deploy_common import (
     AzureContext,
     BootstrapState,
@@ -34,6 +31,8 @@ from ._deploy_common import (
     terraform_output,
     update_tfvars,
 )
+from ._openai_secrets import seed_openai_secrets, set_secret_with_retry
+from ._utils import ensure, run_logged
 
 logger = logging.getLogger(__name__)
 

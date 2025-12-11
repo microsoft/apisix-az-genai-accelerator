@@ -3,89 +3,68 @@ from __future__ import annotations
 import argparse
 import logging
 
-from gateway_ops._utils import ensure
-
 from ._deploy_common import (
     AzureContext,
     BootstrapState,
-    FoundationState,
-    ObservabilityState,
     azure_context,
     configure_logging,
     ensure_tfvars,
     export_core_tf_env,
-    foundation_state_from_outputs,
     load_bootstrap_state,
-    load_observability_state,
     resolve_paths,
     state_key,
     terraform_apply,
     terraform_init_remote,
-    terraform_output,
-    update_tfvars,
 )
+from ._utils import ensure
 
 logger = logging.getLogger(__name__)
 
 
-def deploy_platform(
+def deploy_observability(
     env: str,
     *,
     ctx: AzureContext | None = None,
     bootstrap_state: BootstrapState | None = None,
-    observability_state: ObservabilityState | None = None,
-) -> FoundationState:
+) -> None:
     ensure(["az", "terraform"])
     context = ctx if ctx is not None else azure_context()
     paths = resolve_paths()
+
     bootstrap = (
         bootstrap_state
         if bootstrap_state is not None
         else load_bootstrap_state(env, paths, context)
     )
-    observability = (
-        observability_state
-        if observability_state is not None
-        else load_observability_state(env, paths, context, bootstrap)
-    )
 
     tfvars_file = ensure_tfvars(
-        paths.foundation, env, context.subscription_id, context.tenant_id
-    )
-    update_tfvars(
-        tfvars_file,
-        {
-            "log_analytics_workspace_id": observability.log_analytics_workspace_id,
-        },
+        paths.observability, env, context.subscription_id, context.tenant_id
     )
 
     export_core_tf_env(env, context)
 
-    logger.info("==> 10-platform")
+    logger.info("==> 05-observability")
     terraform_init_remote(
-        paths.foundation,
+        paths.observability,
         tenant_id=context.tenant_id,
         state_rg=bootstrap.resource_group,
         state_sa=bootstrap.storage_account,
         state_container=bootstrap.container,
-        state_key=state_key(bootstrap.state_prefix, "10-platform"),
+        state_key=state_key(bootstrap.state_prefix, "05-observability"),
     )
-    terraform_apply(paths.foundation, tfvars_file)
-
-    outputs = terraform_output(paths.foundation)
-    return foundation_state_from_outputs(outputs)
+    terraform_apply(paths.observability, tfvars_file)
 
 
 def main(argv: list[str] | None = None) -> int:
     configure_logging()
     parser = argparse.ArgumentParser(
-        prog="deploy-platform",
-        description="Deploy the 10-platform terraform stack.",
+        prog="deploy-observability",
+        description="Deploy the 05-observability terraform stack.",
     )
     parser.add_argument("env")
     args = parser.parse_args(argv)
 
-    deploy_platform(args.env)
+    deploy_observability(args.env)
     return 0
 
 

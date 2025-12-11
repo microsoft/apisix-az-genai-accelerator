@@ -4,8 +4,6 @@ import argparse
 import logging
 from pathlib import Path
 
-from gateway_ops._utils import ensure
-
 from ._deploy_common import (
     AzureContext,
     BootstrapState,
@@ -19,6 +17,7 @@ from ._deploy_common import (
     terraform_init_local,
     terraform_output,
 )
+from ._utils import ensure
 
 logger = logging.getLogger(__name__)
 

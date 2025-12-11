@@ -6,8 +6,8 @@ requires-python = ">=3.13"
 members = [
     "apisix-az-genai-accelerator",
     "gateway-config-api",
-    "gateway-ops",
     "hydrenv",
+    "ops",
 ]
 
 [[package]]
@@ -505,25 +505,6 @@ requires-dist = [
     { name = "pydantic-settings", specifier = "==2.10.1" },
     { name = "pyyaml", specifier = "==6.0.3" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.38.0" },
-]
-
-[[package]]
-name = "gateway-ops"
-version = "0.1.0"
-source = { editable = "gateway_ops" }
-dependencies = [
-    { name = "deepdiff" },
-    { name = "pytfvars" },
-    { name = "python-hcl2" },
-    { name = "tenacity" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "deepdiff", specifier = ">=6.7" },
-    { name = "pytfvars", specifier = ">=1.0.3" },
-    { name = "python-hcl2", specifier = ">=7.3.1" },
-    { name = "tenacity", specifier = ">=8.2,<9" },
 ]
 
 [[package]]
@@ -1217,6 +1198,25 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/34/f7/13cd081e7851c42520ab0e96efb17ffbd901111a50b8252ec1e240664020/opentelemetry_util_http-0.59b0.tar.gz", hash = "sha256:ae66ee91be31938d832f3b4bc4eb8a911f6eddd38969c4a871b1230db2a0a560", size = 9412, upload-time = "2025-10-16T08:40:11.335Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/20/56/62282d1d4482061360449dacc990c89cad0fc810a2ed937b636300f55023/opentelemetry_util_http-0.59b0-py3-none-any.whl", hash = "sha256:6d036a07563bce87bf521839c0671b507a02a0d39d7ea61b88efa14c6e25355d", size = 7648, upload-time = "2025-10-16T08:39:25.706Z" },
+]
+
+[[package]]
+name = "ops"
+version = "0.1.0"
+source = { editable = "ops" }
+dependencies = [
+    { name = "deepdiff" },
+    { name = "pytfvars" },
+    { name = "python-hcl2" },
+    { name = "tenacity" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "deepdiff", specifier = ">=6.7" },
+    { name = "pytfvars", specifier = ">=1.0.3" },
+    { name = "python-hcl2", specifier = ">=7.3.1" },
+    { name = "tenacity", specifier = ">=8.2,<9" },
 ]
 
 [[package]]

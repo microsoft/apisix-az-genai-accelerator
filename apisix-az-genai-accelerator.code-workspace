@@ -13,7 +13,7 @@
       "path": "gateway"
     },
     {
-      "path": "gateway_ops"
+      "path": "ops"
     },
     {
       "path": "infra/terraform"

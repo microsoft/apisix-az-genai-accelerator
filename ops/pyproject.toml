@@ -1,5 +1,5 @@
 [project]
-name = "gateway-ops"
+name = "ops"
 version = "0.1.0"
 description = "Python CLI helpers for APISIX Azure GenAI Accelerator"
 requires-python = ">=3.13"

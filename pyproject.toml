@@ -5,25 +5,25 @@ requires-python = ">=3.13"
 dependencies = []
 
 [project.scripts]
-build-and-push-aoai-api-simulator = "gateway_ops.build_and_push_aoai_api_simulator:main"
-build-and-push-gateway-config-api = "gateway_ops.build_and_push_gateway_config_api:main"
-build-and-push-gateway = "gateway_ops.build_and_push_gateway:main"
-build-and-push-hydrenv = "gateway_ops.build_and_push_hydrenv:main"
-deploy-bootstrap = "gateway_ops.deploy_bootstrap:main"
-deploy-foundry = "gateway_ops.deploy_foundry:main"
-deploy-observability = "gateway_ops.deploy_observability:main"
-deploy-platform = "gateway_ops.deploy_platform:main"
-deploy-workload = "gateway_ops.deploy_workload:main"
-run-e2e-latency-routing = "gateway_ops.run_e2e_latency_routing:main"
-run-e2e-manage-spikes-with-payg-v2 = "gateway_ops.run_e2e_manage_spikes_with_payg_v2:main"
-run-e2e-manage-spikes-with-payg = "gateway_ops.run_e2e_manage_spikes_with_payg:main"
-run-e2e-prioritization = "gateway_ops.run_e2e_prioritization:main"
-run-e2e-round-robin-simple-v2 = "gateway_ops.run_e2e_round_robin_simple_v2:main"
-run-e2e-round-robin-simple = "gateway_ops.run_e2e_round_robin_simple:main"
-run-e2e-round-robin-weighted-v2 = "gateway_ops.run_e2e_round_robin_weighted_v2:main"
-run-e2e-round-robin-weighted = "gateway_ops.run_e2e_round_robin_weighted:main"
-run-e2e-tests = "gateway_ops.run_e2e_tests:main"
-run-e2e-usage-tracking = "gateway_ops.run_e2e_usage_tracking:main"
+build-and-push-aoai-api-simulator = "ops.build_and_push_aoai_api_simulator:main"
+build-and-push-gateway-config-api = "ops.build_and_push_gateway_config_api:main"
+build-and-push-gateway = "ops.build_and_push_gateway:main"
+build-and-push-hydrenv = "ops.build_and_push_hydrenv:main"
+deploy-bootstrap = "ops.deploy_bootstrap:main"
+deploy-foundry = "ops.deploy_foundry:main"
+deploy-observability = "ops.deploy_observability:main"
+deploy-platform = "ops.deploy_platform:main"
+deploy-workload = "ops.deploy_workload:main"
+run-e2e-latency-routing = "ops.run_e2e_latency_routing:main"
+run-e2e-manage-spikes-with-payg-v2 = "ops.run_e2e_manage_spikes_with_payg_v2:main"
+run-e2e-manage-spikes-with-payg = "ops.run_e2e_manage_spikes_with_payg:main"
+run-e2e-prioritization = "ops.run_e2e_prioritization:main"
+run-e2e-round-robin-simple-v2 = "ops.run_e2e_round_robin_simple_v2:main"
+run-e2e-round-robin-simple = "ops.run_e2e_round_robin_simple:main"
+run-e2e-round-robin-weighted-v2 = "ops.run_e2e_round_robin_weighted_v2:main"
+run-e2e-round-robin-weighted = "ops.run_e2e_round_robin_weighted:main"
+run-e2e-tests = "ops.run_e2e_tests:main"
+run-e2e-usage-tracking = "ops.run_e2e_usage_tracking:main"
 
 [dependency-groups]
 dev = []
@@ -39,13 +39,13 @@ e2e-tests = [
 ]
 
 [tool.uv.workspace]
-members = ["hydrenv", "gateway_ops", "gateway_config_api"]
+members = ["hydrenv", "ops", "gateway_config_api"]
 
 [tool.uv]
 package = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["gateway_ops/gateway_ops"]
+packages = ["ops/ops"]
 
 [build-system]
 requires = ["hatchling"]
