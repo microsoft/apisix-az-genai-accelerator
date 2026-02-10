@@ -36,7 +36,9 @@
 
 {% set has_appins = applicationinsights_connection_string is defined and applicationinsights_connection_string %}
 {% set has_azure_metrics = azure_monitor_workspace_endpoint is defined and azure_monitor_workspace_endpoint %}
-{% set debug_exporter_enabled = enable_debug_exporter | default(false) %}
+{% set log_mode = (gateway_log_mode | default('prod')) | lower %}
+{% set dev_mode_enabled = log_mode == 'dev' %}
+{% set debug_exporter_enabled = enable_debug_exporter | default(dev_mode_enabled) %}
 {% set metrics_pipeline_enabled = has_azure_metrics or debug_exporter_enabled %}
 
 receivers:

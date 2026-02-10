@@ -19,6 +19,8 @@ state_container_name       = "tfstate"
 foundation_state_blob_key  = "dev/10-platform.tfstate"
 openai_state_blob_key      = "dev/15-foundry.tfstate"
 
+gateway_log_mode = "dev"
+
 app_settings = {
   # ═════════════════════════════════════════════════════════════════════════════
   # Development configuration (non-secret)
@@ -276,7 +278,7 @@ app_settings = {
 
   ## Enable verbose debug exporter (mirrors payloads to stdout)
   ## Allowed: true | false
-  ENABLE_DEBUG_EXPORTER = "false"
+  ENABLE_DEBUG_EXPORTER = "true"
 
   ## Logical service name reported via telemetry
   ## Allowed: non-empty string

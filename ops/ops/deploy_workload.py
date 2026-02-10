@@ -32,7 +32,11 @@ from ._deploy_common import (
     terraform_output,
     update_tfvars,
 )
-from ._openai_secrets import KeyVaultConnectionError, seed_openai_secrets, set_secret_with_retry
+from ._openai_secrets import (
+    KeyVaultConnectionError,
+    seed_openai_secrets,
+    set_secret_with_retry,
+)
 from ._utils import ensure, run_logged
 
 logger = logging.getLogger(__name__)
@@ -330,6 +334,7 @@ def _configure_e2e(tfvars_file: Path, images: dict[str, str]) -> None:
         tfvars_file,
         {
             "gateway_e2e_test_mode": True,
+            "gateway_log_mode": "dev",
             "config_api_shared_secret": config_api_secret,
             "config_api_image": images["gateway-config-api"],
             "simulator_image": images["aoai-api-simulator"],

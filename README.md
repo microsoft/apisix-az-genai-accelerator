@@ -99,13 +99,11 @@ Then edit `infra/terraform/stacks/20-workload/$ENV.tfvars`:
 Notes:
 
 - Add more gateway clients by incrementing the index:
-
   - `GATEWAY_CLIENT_NAME_0`, `GATEWAY_CLIENT_KEY_0`
   - `GATEWAY_CLIENT_NAME_1`, `GATEWAY_CLIENT_KEY_1`
   - …and so on (sequential, no gaps)
 
 - Add more backends the same way:
-
   - `AZURE_OPENAI_ENDPOINT_0`, `AZURE_OPENAI_KEY_0` (and optional `AZURE_OPENAI_NAME_0`, `AZURE_OPENAI_WEIGHT_0`)
   - `AZURE_OPENAI_ENDPOINT_1`, `AZURE_OPENAI_KEY_1`, …
 
@@ -262,6 +260,20 @@ When throttling happens, you can answer: _which backend_, _which region_, _how o
 
 ---
 
+## Log/telemetry mode (optional)
+
+Use `GATEWAY_LOG_MODE` to control logging/telemetry intensity without enabling E2E functional routes or containers.
+
+Modes:
+
+- `prod` (default): low trace sampling, no route-level `file-logger`, debug exporter off
+- `test`: medium trace sampling, route-level `file-logger` on, debug exporter off
+- `dev`: full trace sampling, route-level `file-logger` on, debug exporter on
+
+You can still override `OTEL_SAMPLE_RATE` explicitly.
+
+---
+
 ## Why “standalone APISIX on Container Apps” (cost + ops)
 
 If you only need a reliable traffic brain in front of Azure OpenAI, operating a full Kubernetes control plane + etcd + gateway control plane is often unnecessary overhead.
@@ -279,6 +291,7 @@ A rough, **illustrative** comparison (infra/control-plane cost only; always vali
 ## E2E test mode (optional)
 
 E2E mode deploys additional components used by the APIM/GenAI gateway toolkit tests (config API sidecar + simulator).
+It also sets `GATEWAY_LOG_MODE=dev` for verbose telemetry during test runs.
 
 1. Ensure submodules are present:
 

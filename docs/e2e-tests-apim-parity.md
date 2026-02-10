@@ -51,6 +51,7 @@ When enabled (`--deploy-e2e`), the workload deploys **extra components** used by
 - a **simulator** that can emulate conditions (latency changes, throttling, timeouts)
 - a **config API sidecar** used for toolkit-style update flows
 - extra routes prefixed for test scenarios
+- `GATEWAY_LOG_MODE=dev` for verbose telemetry during test runs
 
 This keeps your normal deployment clean, while letting CI/local runs validate complex flows.
 

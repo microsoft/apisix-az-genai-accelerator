@@ -19,6 +19,8 @@ state_container_name       = "tfstate"
 foundation_state_blob_key  = "test/10-platform.tfstate"
 openai_state_blob_key      = "test/15-foundry.tfstate"
 
+gateway_log_mode = "test"
+
 app_settings = {
   # ═════════════════════════════════════════════════════════════════════════════
   # Test configuration (non-secret)
@@ -271,11 +273,11 @@ app_settings = {
   # OTEL_LOG_LEVEL=info
 
   ## Trace sampling rate (0.0–1.0). Use lower values in prod to cut cost.
-  OTEL_SAMPLE_RATE = "1.0"
+  OTEL_SAMPLE_RATE = "0.5"
 
   ## Enable verbose debug exporter (mirrors payloads to stdout)
   ## Allowed: true | false
-  ENABLE_DEBUG_EXPORTER = "true"
+  ENABLE_DEBUG_EXPORTER = "false"
 
   ## Logical service name reported via telemetry
   ## Allowed: non-empty string

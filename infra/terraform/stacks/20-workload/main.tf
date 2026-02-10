@@ -55,6 +55,20 @@ locals {
 
   derived_app_settings = var.app_settings
 
+  log_mode_value = lower(var.gateway_log_mode)
+  otel_sample_rate_map = {
+    prod = "0.1"
+    test = "0.5"
+    dev  = "1.0"
+  }
+  otel_sample_rate_default = lookup(local.otel_sample_rate_map, local.log_mode_value, "0.1")
+  otel_sample_rate_setting = contains(keys(local.derived_app_settings), "OTEL_SAMPLE_RATE") ? {} : {
+    OTEL_SAMPLE_RATE = local.otel_sample_rate_default
+  }
+  log_mode_settings = {
+    GATEWAY_LOG_MODE = local.log_mode_value
+  }
+
   derived_secret_names = [
     for key in local.derived_secret_keys : lower(replace(key, "_", "-"))
   ]
@@ -83,7 +97,9 @@ locals {
     local.provisioned_backend_env_vars,
     local.provisioned_backend_priorities,
     local.provisioned_backend_weights,
-    local.derived_app_settings
+    local.otel_sample_rate_setting,
+    local.derived_app_settings,
+    local.log_mode_settings
   )
 
   final_secret_names = distinct(concat(
@@ -265,6 +281,7 @@ module "gateway" {
   gateway_image            = var.gateway_image
   hydrenv_image            = var.hydrenv_image
   gateway_e2e_test_mode    = var.gateway_e2e_test_mode
+  gateway_log_mode         = var.gateway_log_mode
   config_api_image         = var.config_api_image
   config_api_shared_secret = var.config_api_shared_secret
 

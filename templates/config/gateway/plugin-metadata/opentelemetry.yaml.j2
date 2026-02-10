@@ -42,6 +42,16 @@
   See also: infra/observability/otel-collector-config.yaml
 #}
 {% if otel_collector_endpoint | default('') %}
+{% set _log_mode = (gateway_log_mode | default('prod')) | lower %}
+{% if otel_sample_rate is defined %}
+{% set _otel_sample_rate = otel_sample_rate %}
+{% elif _log_mode == 'dev' %}
+{% set _otel_sample_rate = 1.0 %}
+{% elif _log_mode == 'test' %}
+{% set _otel_sample_rate = 0.5 %}
+{% else %}
+{% set _otel_sample_rate = 0.1 %}
+{% endif %}
 - id: opentelemetry
   resource:
     service.name: {{ otel_service_name | default('apisix-gateway') | tojson }}
@@ -60,7 +70,7 @@
   trace_sampler:
     name: "trace_id_ratio"  # Use trace_id_ratio to apply fraction-based sampling
     options:
-      fraction: {{ otel_sample_rate | default(1.0) }}
+      fraction: {{ _otel_sample_rate }}
   # Capture correlation and Azure-specific headers as span attributes
   additional_header_prefix_attributes:
     - "x-request-id"

@@ -47,10 +47,12 @@ proxy-rewrite:
     prometheus:
       prefer_name: true
 
+    {% if (gateway_log_mode | default('prod') | lower) in ['test', 'dev'] %}
     file-logger:
       path: "/usr/local/apisix/logs/genai_access.json"
       include_req_body: false
       include_resp_body: false
+    {% endif %}
 
   # Dummy upstream required by APISIX schema; ai-proxy-multi drives real routing
   upstream:

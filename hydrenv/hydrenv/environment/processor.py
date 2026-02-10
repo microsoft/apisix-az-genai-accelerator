@@ -67,6 +67,9 @@ def normalize_env() -> dict[str, Any]:
     normalized["gateway_e2e_test_mode"] = _parse_bool(
         os.environ.get("GATEWAY_E2E_TEST_MODE", "false")
     )
+    log_mode_raw = os.environ.get("GATEWAY_LOG_MODE", "prod")
+    log_mode = log_mode_raw.strip().lower()
+    normalized["gateway_log_mode"] = log_mode or "prod"
 
     return normalized
 

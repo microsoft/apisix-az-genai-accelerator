@@ -153,6 +153,16 @@ variable "use_provisioned_azure_openai" {
   default     = false
 }
 
+variable "gateway_log_mode" {
+  description = "Log/telemetry mode (prod | test | dev)"
+  type        = string
+  default     = "prod"
+  validation {
+    condition     = contains(["prod", "test", "dev"], lower(var.gateway_log_mode))
+    error_message = "gateway_log_mode must be one of: prod, test, dev"
+  }
+}
+
 variable "gateway_e2e_test_mode" {
   description = "Enable E2E test mode (deploy config API sidecar and simulators)"
   type        = bool

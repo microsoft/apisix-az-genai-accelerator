@@ -15,6 +15,8 @@
   See: https://apisix.apache.org/docs/apisix/plugins/file-logger/
   See: https://github.com/apache/apisix/releases/tag/3.14.0 (LLM variables)
 #}
+{% set _log_mode = (gateway_log_mode | default('prod')) | lower %}
+{% if _log_mode == 'test' or _log_mode == 'dev' %}
 - id: file-logger
   log_format:
     # Timestamp & Identity
@@ -55,3 +57,4 @@
     
     # Backend Region (Azure AOAI specific)
     backend_region: "$upstream_http_x_ms_region"
+{% endif %}

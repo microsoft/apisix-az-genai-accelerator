@@ -19,6 +19,8 @@ state_container_name       = "tfstate"
 foundation_state_blob_key  = "prod/10-platform.tfstate"
 openai_state_blob_key      = "prod/15-foundry.tfstate"
 
+gateway_log_mode = "prod"
+
 app_settings = {
   # =====================================================================
   # Container Apps configuration (non-secret)

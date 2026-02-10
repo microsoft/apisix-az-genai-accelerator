@@ -80,11 +80,13 @@ proxy-rewrite:
     prometheus:
       prefer_name: true  # Use route/consumer names instead of IDs in labels
 
+    {% if (gateway_log_mode | default('prod') | lower) in ['test', 'dev'] %}
     # Structured JSON logging for LLM analytics
     file-logger:
       path: "/usr/local/apisix/logs/genai_access.json"
       include_req_body: false
       include_resp_body: false
+    {% endif %}
 
   upstream:
     nodes: { "127.0.0.1:1": 1 }
