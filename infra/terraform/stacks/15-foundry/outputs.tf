@@ -2,7 +2,7 @@ output "azure_openai_endpoints" {
   description = "Provisioned Azure OpenAI endpoints with metadata"
   value = [
     for idx in sort(keys(local.ai_foundry_instances)) : {
-      index    = tonumber(idx)
+      index = tonumber(idx)
       # Use the Cognitive Services data-plane endpoint. This supports the native
       # OpenAI v1 surface including /openai/v1/responses and /openai/v1/embeddings.
       endpoint = "https://${module.ai_foundry[idx].ai_foundry_name}.cognitiveservices.azure.com"
@@ -16,7 +16,7 @@ output "azure_openai_endpoints" {
 
 output "azure_openai_key_vault_secret_names" {
   description = "Key Vault secret names for Azure AI Foundry API keys"
-  value = local.key_vault_available ? [
+  value = local.key_vault_available && !var.azure_openai_disable_local_auth ? [
     for idx in sort(keys(module.ai_foundry)) : "azure-openai-key-${idx}"
   ] : []
 }

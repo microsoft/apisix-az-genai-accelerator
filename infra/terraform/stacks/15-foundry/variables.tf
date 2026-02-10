@@ -73,6 +73,12 @@ variable "azure_openai_custom_subdomain_prefix" {
   default     = ""
 }
 
+variable "azure_openai_disable_local_auth" {
+  description = "Disable local key-based auth on Azure AI Foundry accounts (Entra-only). When true, key listing/outputs are disabled."
+  type        = bool
+  default     = true
+}
+
 variable "log_analytics_workspace_id" {
   description = "Log Analytics workspace ID for diagnostic settings (optional)"
   type        = string

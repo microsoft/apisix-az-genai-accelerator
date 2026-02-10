@@ -112,8 +112,8 @@ module "ai_foundry" {
     allow_project_management = true
     create_ai_agent_service  = false
     # Enforce Entra ID-only data-plane access (no key-based local auth).
-    disable_local_auth       = true
-    sku                      = each.value.sku_name
+    disable_local_auth = var.azure_openai_disable_local_auth
+    sku                = each.value.sku_name
   }
 
   ai_projects = {
@@ -140,7 +140,8 @@ module "ai_foundry" {
 }
 
 resource "azapi_resource_action" "ai_foundry_keys" {
-  for_each = module.ai_foundry
+  # When local auth is disabled, listKeys fails and keys are not usable anyway.
+  for_each = var.azure_openai_disable_local_auth ? {} : module.ai_foundry
 
   type                   = "Microsoft.CognitiveServices/accounts@2024-10-01"
   resource_id            = each.value.ai_foundry_id
