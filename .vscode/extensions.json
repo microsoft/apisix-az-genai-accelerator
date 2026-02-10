@@ -1,3 +1,7 @@
 {
-  "recommendations": ["sumneko.lua", "bierner.markdown-mermaid"]
+	"recommendations": [
+		"sumneko.lua",
+		"bierner.markdown-mermaid",
+		"johnnymorganz.stylua"
+	]
 }
