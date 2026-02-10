@@ -19,6 +19,7 @@ local plugin = require("apisix.plugin")
 local sse = require("apisix.plugins.ai-drivers.sse")
 local url = require("socket.url")
 local managed_identity = require("ai_accel.managed_identity")
+local accel_utils = require("ai_accel.utils")
 
 local _M = {}
 local mt = { __index = _M }
@@ -108,15 +109,62 @@ end
 
 -- ===== Utilities =====
 
-local function shallow_copy(t)
-	if type(t) ~= "table" then
-		return {}
+local function sse_retryable_status_from_chunk(chunk)
+	-- Some Azure OpenAI streaming errors are surfaced as SSE "error" events
+	-- while the HTTP status remains 200. Detect retryable error codes early so
+	-- ai-proxy-multi can fail over to another backend.
+	if type(chunk) ~= "string" or chunk == "" then
+		return nil
 	end
-	local c = {}
-	for k, v in pairs(t) do
-		c[k] = v
+
+	local events = sse.decode(chunk)
+	for _, event in ipairs(events) do
+		local data, derr = core.json.decode(event.data)
+		if not data then
+			core.log.warn("failed to decode SSE data for retry detection: ", derr)
+			goto CONTINUE
+		end
+
+		local err_obj = data.error
+		if type(err_obj) == "table" then
+			local code = err_obj.code or err_obj.type
+			if code == "too_many_requests" then
+				return ngx.HTTP_TOO_MANY_REQUESTS, core.json.encode({ error = err_obj })
+			end
+			if code == "server_error" or code == "internal_error" or code == "service_unavailable" then
+				return ngx.HTTP_BAD_GATEWAY, core.json.encode({ error = err_obj })
+			end
+		end
+
+		::CONTINUE::
 	end
-	return c
+
+	return nil
+end
+
+local function responses_sse_chunk_has_output(chunk)
+	if type(chunk) ~= "string" or chunk == "" then
+		return false
+	end
+
+	local events = sse.decode(chunk)
+	for _, event in ipairs(events) do
+		local data = core.json.decode(event.data)
+		if data then
+			local event_type = event.type or data.type
+			if event_type == "response.output_text.delta" then
+				return true
+			end
+			if event_type == "response.output_item.added" and type(data.item) == "table" then
+				-- A message item being added implies subsequent deltas/content parts.
+				if data.item.type == "message" then
+					return true
+				end
+			end
+		end
+	end
+
+	return false
 end
 
 local function method_allows_body(method)
@@ -216,15 +264,22 @@ local function set_responses_text(ctx, pieces)
 	ctx.var.llm_response_text = table.concat(pieces, "")
 end
 
-local function handle_chat_stream(ctx, res, body_reader, conf, httpc, contents)
+local function handle_chat_stream(ctx, res, body_reader, conf, httpc, contents, pending_chunks)
 	-- Azure OpenAI chat SSE invariants (2023-05-15 GA onward):
 	--   - Each chunk decodes to events containing choices[].delta.content
 	--   - usage.{prompt_tokens, completion_tokens, total_tokens} may appear on the
 	--     final message event. We only rely on those stable fields so older and
 	--     newer api-version payloads continue to work.
 	contents = contents or {}
+	local pending, pending_i, pending_n = accel_utils.normalize_pending_chunks(pending_chunks)
 	while true do
-		local chunk, err = body_reader()
+		local chunk, err
+		if pending and pending_i <= pending_n then
+			chunk = pending[pending_i]
+			pending_i = pending_i + 1
+		else
+			chunk, err = body_reader()
+		end
 		ctx.var.apisix_upstream_response_time = math.floor((ngx.now() - ctx.llm_request_start_time) * 1000)
 
 		if err then
@@ -297,16 +352,23 @@ local function handle_chat_stream(ctx, res, body_reader, conf, httpc, contents)
 	end
 end
 
-local function handle_responses_stream(ctx, res, body_reader, conf, httpc)
+local function handle_responses_stream(ctx, res, body_reader, conf, httpc, pending_chunks)
 	-- Responses SSE events (2025-03-01-preview onward) emit delta-style updates.
 	-- We focus on response.output_text.delta and response.output_item.added for
 	-- text aggregation, and response.completed / *.usage for stable token counts.
 	local buffer = {}
 	local last_usage
 	local last_response
+	local pending, pending_i, pending_n = accel_utils.normalize_pending_chunks(pending_chunks)
 
 	while true do
-		local chunk, err = body_reader()
+		local chunk, err
+		if pending and pending_i <= pending_n then
+			chunk = pending[pending_i]
+			pending_i = pending_i + 1
+		else
+			chunk, err = body_reader()
+		end
 		ctx.var.apisix_upstream_response_time = math.floor((ngx.now() - ctx.llm_request_start_time) * 1000)
 
 		if err then
@@ -535,9 +597,17 @@ function _M.request(self, ctx, conf, request_table, extra_opts)
 	end
 
 	-- Transparent path & query
-	local path = ctx.var.upstream_uri or ctx.upstream_uri or ngx.var.upstream_uri or ctx.var.uri or ""
+	-- Nginx/APISIX vars may be set to "" when unset; treat empty as missing.
+	local path =
+		accel_utils.first_non_empty_string(
+			ctx.var.upstream_uri,
+			ctx.upstream_uri,
+			ngx.var.upstream_uri,
+			ctx.var.uri,
+			ngx.var.uri
+		)
 	local in_query = core.request.get_uri_args(ctx) or {}
-	local query_params = shallow_copy(in_query)
+	local query_params = accel_utils.shallow_copy(in_query)
 	local request_kind = classify_request(path)
 
 	if type(request_table) ~= "table" then
@@ -560,9 +630,24 @@ function _M.request(self, ctx, conf, request_table, extra_opts)
 
 	-- Apply model_options into the request body (plugin contract; pure merge)
 	if has_body then
-		local model_opts = shallow_copy(extra_opts.model_options)
+		local model_opts = accel_utils.shallow_copy(extra_opts.model_options)
 		for opt, val in pairs(model_opts) do
 			request_table[opt] = val
+		end
+	end
+
+	-- Azure OpenAI's OpenAI v1 Responses streaming does not currently accept
+	-- stream_options.include_usage, but some upstream callers/plugins may inject it.
+	-- Strip it to keep streaming functional.
+	if request_kind == "ai_responses" and type(request_table) == "table" then
+		local so = request_table.stream_options
+		if type(so) == "table" then
+			so.include_usage = nil
+			if next(so) == nil then
+				request_table.stream_options = nil
+			end
+		else
+			request_table.stream_options = nil
 		end
 	end
 
@@ -656,11 +741,7 @@ function _M.request(self, ctx, conf, request_table, extra_opts)
 	end
 
 	-- Success or non-retryable 4xx: manual streaming with response filter parity.
-	-- 1) Status and transparent headers (sanitized)
-	ngx.status = res.status
-	sanitize_and_apply_resp_headers(res.headers)
-
-	-- 2) Content-Type and SSE detection
+	-- 1) Content-Type and SSE detection
 	local content_type = res.headers and (res.headers["Content-Type"] or res.headers["content-type"])
 	local is_sse = content_type and string.find(string.lower(content_type), "text/event-stream", 1, true)
 
@@ -679,14 +760,60 @@ function _M.request(self, ctx, conf, request_table, extra_opts)
 			return ngx.HTTP_INTERNAL_SERVER_ERROR
 		end
 
-		local stream_res
-		if request_kind == "ai_responses" then
-			stream_res = handle_responses_stream(ctx, res, body_reader, conf, httpc)
-		else
-			stream_res = handle_chat_stream(ctx, res, body_reader, conf, httpc, {})
+		-- Pre-read the first chunk so we can detect retryable SSE error events
+		-- (notably too_many_requests) before sending any bytes to the client.
+		local first_chunk, ferr = body_reader()
+		if ferr then
+			core.log.warn("failed to read first SSE chunk: ", ferr)
+			return handle_error(ferr)
 		end
-		return stream_res
+		if not first_chunk then
+			core.log.warn("AI service sent no response body (SSE, first chunk nil)")
+			return ngx.HTTP_INTERNAL_SERVER_ERROR
+		end
+
+		local pending_chunks = { first_chunk }
+		local retry_status, retry_body = sse_retryable_status_from_chunk(first_chunk)
+
+		-- Some backends emit response.created/in_progress first and only send the
+		-- retryable error event in the next chunk. If we haven't seen any output
+		-- deltas yet, prefetch one more chunk to catch early rate limits before
+		-- starting the client stream.
+		if not retry_status and request_kind == "ai_responses" and not responses_sse_chunk_has_output(first_chunk) then
+			local second_chunk, serr = body_reader()
+			if serr then
+				core.log.warn("failed to read second SSE chunk: ", serr)
+				return handle_error(serr)
+			end
+			if not second_chunk then
+				core.log.warn("AI service sent no response body (SSE, second chunk nil)")
+				return ngx.HTTP_INTERNAL_SERVER_ERROR
+			end
+
+			pending_chunks = { first_chunk, second_chunk }
+			retry_status, retry_body = sse_retryable_status_from_chunk(second_chunk)
+		end
+
+		if retry_status then
+			httpc:close()
+			return retry_status, retry_body
+		end
+
+		-- Status and transparent headers (sanitized) are sent only after we've
+		-- ruled out immediate retryable streaming errors.
+		ngx.status = res.status
+		sanitize_and_apply_resp_headers(res.headers)
+
+		if request_kind == "ai_responses" then
+			return handle_responses_stream(ctx, res, body_reader, conf, httpc, pending_chunks)
+		else
+			return handle_chat_stream(ctx, res, body_reader, conf, httpc, {}, first_chunk)
+		end
 	end
+
+	-- 2) Status and transparent headers (sanitized) for non-SSE responses.
+	ngx.status = res.status
+	sanitize_and_apply_resp_headers(res.headers)
 
 	-- Non-SSE: read entire body, update metrics/usage once, filter parity
 	if request_kind then

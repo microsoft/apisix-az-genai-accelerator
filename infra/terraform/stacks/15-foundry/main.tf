@@ -51,7 +51,7 @@ locals {
       model_deployments = {
         for dep in instance.deployments : dep.name => {
           name                   = dep.name
-          rai_policy_name        = null
+          rai_policy_name        = dep.rai_policy_name
           version_upgrade_option = dep.version_upgrade_option
           model = {
             format  = "OpenAI"
@@ -111,6 +111,8 @@ module "ai_foundry" {
     name                     = each.value.resource_name
     allow_project_management = true
     create_ai_agent_service  = false
+    # Enforce Entra ID-only data-plane access (no key-based local auth).
+    disable_local_auth       = true
     sku                      = each.value.sku_name
   }
 

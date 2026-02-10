@@ -49,6 +49,7 @@ variable "azure_openai_instances" {
       scale_type                 = optional(string, "Standard")
       capacity                   = optional(number, 1)
       dynamic_throttling_enabled = optional(bool, false)
+      rai_policy_name            = optional(string)
       version_upgrade_option     = optional(string, "OnceNewDefaultVersionAvailable")
     }))
   }))

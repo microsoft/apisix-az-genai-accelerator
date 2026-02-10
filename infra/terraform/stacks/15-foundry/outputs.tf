@@ -3,8 +3,10 @@ output "azure_openai_endpoints" {
   value = [
     for idx in sort(keys(local.ai_foundry_instances)) : {
       index    = tonumber(idx)
-      endpoint = "https://${module.ai_foundry[idx].ai_foundry_name}.services.ai.azure.com"
-      host     = "${module.ai_foundry[idx].ai_foundry_name}.services.ai.azure.com"
+      # Use the Cognitive Services data-plane endpoint. This supports the native
+      # OpenAI v1 surface including /openai/v1/responses and /openai/v1/embeddings.
+      endpoint = "https://${module.ai_foundry[idx].ai_foundry_name}.cognitiveservices.azure.com"
+      host     = "${module.ai_foundry[idx].ai_foundry_name}.cognitiveservices.azure.com"
       location = try(local.ai_foundry_instances[idx].location, var.location)
       priority = try(local.ai_foundry_instances[idx].priority, 5)
       weight   = try(local.ai_foundry_instances[idx].weight, 1)

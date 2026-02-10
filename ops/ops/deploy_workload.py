@@ -24,6 +24,7 @@ from ._deploy_common import (
     load_foundation_state,
     load_observability_state,
     load_tfvars,
+    remote_state_outputs,
     resolve_paths,
     state_key,
     terraform_apply,
@@ -31,7 +32,7 @@ from ._deploy_common import (
     terraform_output,
     update_tfvars,
 )
-from ._openai_secrets import seed_openai_secrets, set_secret_with_retry
+from ._openai_secrets import KeyVaultConnectionError, seed_openai_secrets, set_secret_with_retry
 from ._utils import ensure, run_logged
 
 logger = logging.getLogger(__name__)
@@ -212,16 +213,12 @@ def _detect_openai_state(
     export_foundation_tf_env(env, ctx, bootstrap, foundation)
     openai_state_key = state_key(bootstrap.state_prefix, "15-foundry")
     try:
-        terraform_init_remote(
-            paths.foundry,
-            tenant_id=ctx.tenant_id,
-            state_rg=bootstrap.resource_group,
-            state_sa=bootstrap.storage_account,
+        remote_state_outputs(
+            state_storage_account=bootstrap.storage_account,
             state_container=bootstrap.container,
             state_key=openai_state_key,
         )
-        terraform_output(paths.foundry)
-    except subprocess.CalledProcessError:
+    except Exception:  # noqa: BLE001
         logger.info(
             "Azure OpenAI state not found; continuing without provisioned OpenAI"
         )
@@ -257,23 +254,31 @@ def _seed_secrets_and_openai(
         k: str(v) for k, v in (data.get("secrets", {}) or {}).items()
     }
 
-    # Seed non-AOAI secrets to KV
-    for key, value in secrets.items():
-        secret_name = key.lower().replace("_", "-")
-        set_secret_with_retry(key_vault, secret_name, value)
+    try:
+        # Seed non-AOAI secrets to KV
+        for key, value in secrets.items():
+            secret_name = key.lower().replace("_", "-")
+            set_secret_with_retry(key_vault, secret_name, value)
 
-    # Seed AOAI secrets (provisioned or expected)
-    openai_secret_names = _infer_openai_secret_names(app_settings)
-    should_seed_openai = (
-        paths.foundry.exists() or use_provisioned_openai or len(openai_secret_names) > 0
-    )
-    if should_seed_openai:
-        seed_openai_secrets(
-            env,
-            key_vault,
-            expected_secret_names=openai_secret_names,
-            allow_placeholders=True,
-            paths=paths,
+        # Seed AOAI secrets (provisioned or expected)
+        openai_secret_names = _infer_openai_secret_names(app_settings)
+        should_seed_openai = (
+            paths.foundry.exists()
+            or use_provisioned_openai
+            or len(openai_secret_names) > 0
+        )
+        if should_seed_openai:
+            seed_openai_secrets(
+                env,
+                key_vault,
+                expected_secret_names=openai_secret_names,
+                allow_placeholders=True,
+                paths=paths,
+            )
+    except KeyVaultConnectionError:
+        logger.warning(
+            "Skipping Key Vault secret seeding because the Key Vault data plane is unreachable "
+            "from this environment (private-only vault). Assuming required secrets already exist."
         )
 
     # Basic validation: ensure at least one gateway client key is present in tfvars

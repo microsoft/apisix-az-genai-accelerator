@@ -19,10 +19,9 @@ from ._deploy_common import (
     Paths,
     azure_context,
     load_bootstrap_state,
+    remote_state_outputs,
     resolve_paths,
     state_key,
-    terraform_init_remote,
-    terraform_output,
 )
 from ._utils import run_logged
 
@@ -37,6 +36,10 @@ class RbacPropagationError(Exception):
     """Raised when Key Vault RBAC propagation has not completed yet."""
 
 
+class KeyVaultConnectionError(Exception):
+    """Raised when Key Vault data plane is unreachable (e.g., private-only vault)."""
+
+
 def _is_forbidden_by_rbac(exc: subprocess.CalledProcessError) -> bool:
     msg = (exc.stderr or "") + (exc.stdout or "")
     lowered = msg.lower()
@@ -45,6 +48,12 @@ def _is_forbidden_by_rbac(exc: subprocess.CalledProcessError) -> bool:
         or "caller is not authorized" in lowered
         or ("forbidden" in lowered and "keyvault" in lowered)
     )
+
+
+def _is_forbidden_by_connection(exc: subprocess.CalledProcessError) -> bool:
+    msg = (exc.stderr or "") + (exc.stdout or "")
+    lowered = msg.lower()
+    return "forbiddenbyconnection" in lowered or "public network access is disabled" in lowered
 
 
 @retry(
@@ -84,6 +93,8 @@ def set_secret_with_retry(
     except subprocess.CalledProcessError as exc:
         if _is_forbidden_by_rbac(exc):
             raise RbacPropagationError(str(exc)) from exc
+        if _is_forbidden_by_connection(exc):
+            raise KeyVaultConnectionError(str(exc)) from exc
         raise
 
 
@@ -114,6 +125,8 @@ def _read_existing_secret(
             return None, {}
         if _is_forbidden_by_rbac(exc):
             raise RbacPropagationError(str(exc)) from exc
+        if _is_forbidden_by_connection(exc):
+            raise KeyVaultConnectionError(str(exc)) from exc
         raise
 
     parsed = json.loads(result.stdout)
@@ -134,15 +147,11 @@ def _load_foundry_outputs(
         return None
 
     try:
-        terraform_init_remote(
-            paths.foundry,
-            tenant_id=ctx.tenant_id,
-            state_rg=bootstrap.resource_group,
-            state_sa=bootstrap.storage_account,
+        outputs = remote_state_outputs(
+            state_storage_account=bootstrap.storage_account,
             state_container=bootstrap.container,
             state_key=state_key(bootstrap.state_prefix, "15-foundry"),
         )
-        outputs = terraform_output(paths.foundry)
     except Exception as exc:  # noqa: BLE001
         logger.info("Unable to read 15-foundry state for OpenAI sync: %s", exc)
         return None

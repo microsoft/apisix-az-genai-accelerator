@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 
 from ._deploy_common import (
     AzureContext,
@@ -20,7 +21,7 @@ from ._deploy_common import (
     terraform_init_remote,
     update_tfvars,
 )
-from ._openai_secrets import seed_openai_secrets
+from ._openai_secrets import KeyVaultConnectionError, seed_openai_secrets
 from ._utils import ensure
 
 logger = logging.getLogger(__name__)
@@ -83,26 +84,35 @@ def deploy_foundry(
         state_container=bootstrap.container,
         state_key=openai_state_key,
     )
+    # Azure OpenAI accounts frequently reject concurrent deployment updates with
+    # 409 RequestConflict. Apply sequentially to make deploys deterministic.
+    os.environ.setdefault("TF_CLI_ARGS_apply", "-parallelism=1")
     terraform_apply(paths.foundry, tfvars_file)
-    seed_summary = seed_openai_secrets(
-        env,
-        foundation.key_vault_name,
-        allow_placeholders=False,
-        ctx=context,
-        bootstrap_state=bootstrap,
-        paths=paths,
-    )
-    if len(seed_summary["seeded"]) == 0:
-        logger.warning(
-            "Foundry apply succeeded but no OpenAI secrets were seeded into %s; "
-            "rerun deploy-workload after verifying terraform outputs",
+    try:
+        seed_summary = seed_openai_secrets(
+            env,
             foundation.key_vault_name,
+            allow_placeholders=False,
+            ctx=context,
+            bootstrap_state=bootstrap,
+            paths=paths,
         )
-    else:
-        logger.info(
-            "Seeded %d Azure OpenAI secrets into Key Vault %s",
-            len(seed_summary["seeded"]),
-            foundation.key_vault_name,
+        if len(seed_summary["seeded"]) == 0:
+            logger.warning(
+                "Foundry apply succeeded but no OpenAI secrets were seeded into %s; "
+                "rerun deploy-workload after verifying terraform outputs",
+                foundation.key_vault_name,
+            )
+        else:
+            logger.info(
+                "Seeded %d Azure OpenAI secrets into Key Vault %s",
+                len(seed_summary["seeded"]),
+                foundation.key_vault_name,
+            )
+    except KeyVaultConnectionError:
+        logger.warning(
+            "Foundry apply succeeded but Key Vault secrets were not synced because the Key Vault "
+            "data plane is unreachable from this environment (private-only vault). Continuing."
         )
 
     return FoundryState(provisioned=True, state_blob_key=openai_state_key)

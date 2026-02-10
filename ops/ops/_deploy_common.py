@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import subprocess
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -90,6 +91,10 @@ class RequestConflictError(Exception):
     """Raised when Azure reports a transient 409 RequestConflict on apply."""
 
 
+class StateAccessTimeoutError(Exception):
+    """Raised when Terraform times out reading remote state from Azure Storage."""
+
+
 def _is_storage_rbac_error(exc: subprocess.CalledProcessError) -> bool:
     message = (exc.stderr or "") + (exc.output or "")
     lowered = message.lower()
@@ -135,6 +140,86 @@ def _is_request_conflict(exc: subprocess.CalledProcessError) -> bool:
     )
 
 
+def _is_state_access_timeout(exc: subprocess.CalledProcessError) -> bool:
+    message = (exc.stderr or "") + (exc.output or "")
+    lowered = message.lower()
+    # Narrowly match network/transient state read failures.
+    return (
+        "error loading the remote state" in lowered
+        or "error loading state" in lowered
+        or "blob.core.windows.net" in lowered
+    ) and (
+        "operation timed out" in lowered
+        or "i/o timeout" in lowered
+        or "context deadline exceeded" in lowered
+        or "connection reset by peer" in lowered
+        or "connection may have been reset" in lowered
+        or "http response was nil" in lowered
+        or "unexpected eof" in lowered
+        or "\neof" in lowered
+    )
+
+
+def _is_stale_state_lock(exc: subprocess.CalledProcessError) -> bool:
+    message = (exc.stderr or "") + (exc.output or "")
+    lowered = message.lower()
+    return (
+        "error acquiring the state lock" in lowered
+        and "state blob is already locked" in lowered
+        and "terraformlockid" in lowered
+        and "was empty" in lowered
+    )
+
+
+def _break_state_lease(stack_dir: Path) -> None:
+    tfstate_path = stack_dir / ".terraform" / "terraform.tfstate"
+    parsed = json.loads(tfstate_path.read_text())
+    backend = parsed.get("backend") or {}
+    config = backend.get("config") or {}
+    state_sa = config.get("storage_account_name")
+    state_container = config.get("container_name")
+    state_key = config.get("key")
+    if not all(isinstance(v, str) and v for v in (state_sa, state_container, state_key)):
+        raise KeyError(f"Missing azurerm backend config in {tfstate_path}")
+
+    run_logged(
+        [
+            "az",
+            "storage",
+            "blob",
+            "lease",
+            "break",
+            "--auth-mode",
+            "login",
+            "--only-show-errors",
+            "--account-name",
+            state_sa,
+            "--container-name",
+            state_container,
+            "--blob-name",
+            state_key,
+            "-o",
+            "none",
+        ],
+        capture_output=True,
+        echo="on_error",
+    )
+
+
+def _log_output_retry(retry_state: RetryCallState) -> None:
+    attempt = retry_state.attempt_number
+    sleep_for = (
+        f"; waiting {retry_state.next_action.sleep:.0f}s"
+        if retry_state.next_action and retry_state.next_action.sleep is not None
+        else ""
+    )
+    logger.warning(
+        "Terraform output: retrying after remote state timeout (attempt %d/5)%s",
+        attempt,
+        sleep_for,
+    )
+
+
 def _is_fatal_apply_error(exc: subprocess.CalledProcessError) -> bool:
     message = (exc.stderr or "") + (exc.output or "")
     lowered = message.lower()
@@ -158,8 +243,11 @@ def _log_apply_retry(retry_state: RetryCallState) -> None:
         if retry_state.next_action and retry_state.next_action.sleep is not None
         else ""
     )
+    exc = retry_state.outcome.exception() if retry_state.outcome else None
+    reason = type(exc).__name__ if exc is not None else "transient error"
     logger.warning(
-        "Terraform apply: retrying after Azure RequestConflict (attempt %d/5)%s",
+        "Terraform apply: retrying after %s (attempt %d/12)%s",
+        reason,
         attempt,
         sleep_for,
     )
@@ -330,6 +418,10 @@ def export_core_tf_env(env: str, ctx: AzureContext) -> None:
     os.environ["TF_VAR_environment_code"] = env
     os.environ["ARM_SUBSCRIPTION_ID"] = ctx.subscription_id
     os.environ["ARM_TENANT_ID"] = ctx.tenant_id
+    # Terraform is a Go binary. Force the pure Go DNS resolver so it uses the
+    # DNS response ordering instead of `getaddrinfo` ordering, which can place
+    # an unreachable Traffic Manager IP first and cause long connect timeouts.
+    os.environ.setdefault("GODEBUG", "netdns=go")
 
 
 def export_foundation_tf_env(
@@ -351,6 +443,46 @@ def terraform_init_local(stack_dir: Path, state_path: Path) -> None:
     )
 
 
+def _remote_backend_is_configured(
+    stack_dir: Path,
+    *,
+    tenant_id: str,
+    state_rg: str,
+    state_sa: str,
+    state_container: str,
+    state_key: str,
+) -> bool:
+    tfstate_path = stack_dir / ".terraform" / "terraform.tfstate"
+    if not tfstate_path.exists():
+        return False
+    try:
+        parsed = json.loads(tfstate_path.read_text())
+    except Exception:  # noqa: BLE001
+        return False
+    backend = parsed.get("backend")
+    if not isinstance(backend, dict) or backend.get("type") != "azurerm":
+        return False
+    config = backend.get("config")
+    if not isinstance(config, dict):
+        return False
+
+    expected = {
+        "use_azuread_auth": True,
+        "tenant_id": tenant_id,
+        "resource_group_name": state_rg,
+        "storage_account_name": state_sa,
+        "container_name": state_container,
+        "key": state_key,
+    }
+    return all(config.get(key) == value for key, value in expected.items())
+
+
+def _terraform_env() -> dict[str, str]:
+    env = dict(os.environ)
+    env.setdefault("GODEBUG", "netdns=go")
+    return env
+
+
 @retry(
     reraise=True,
     retry=retry_if_exception_type(StorageRbacPropagationError),
@@ -367,6 +499,16 @@ def terraform_init_remote(
     state_container: str,
     state_key: str,
 ) -> None:
+    if _remote_backend_is_configured(
+        stack_dir,
+        tenant_id=tenant_id,
+        state_rg=state_rg,
+        state_sa=state_sa,
+        state_container=state_container,
+        state_key=state_key,
+    ):
+        logger.info("Terraform init: backend already configured (%s)", stack_dir.name)
+        return
     try:
         run_logged(
             [
@@ -383,6 +525,7 @@ def terraform_init_remote(
             ],
             capture_output=True,
             echo="always",
+            env=_terraform_env(),
         )
     except subprocess.CalledProcessError as exc:
         if _is_storage_rbac_error(exc):
@@ -392,8 +535,8 @@ def terraform_init_remote(
 
 @retry(
     reraise=True,
-    retry=retry_if_exception_type(RequestConflictError),
-    stop=stop_after_attempt(5),
+    retry=retry_if_exception_type((RequestConflictError, StateAccessTimeoutError)),
+    stop=stop_after_attempt(12),
     wait=wait_exponential(multiplier=1, min=5, max=60),
     before_sleep=_log_apply_retry,
 )
@@ -409,20 +552,100 @@ def terraform_apply(stack_dir: Path, tfvars_file: Path) -> None:
             ],
             capture_output=True,
             echo="always",
+            env=_terraform_env(),
         )
     except subprocess.CalledProcessError as exc:
+        if _is_stale_state_lock(exc):
+            try:
+                _break_state_lease(stack_dir)
+            except Exception as break_exc:  # noqa: BLE001
+                logger.warning(
+                    "Terraform apply: failed to break stale state lease for %s (%s)",
+                    stack_dir.name,
+                    break_exc,
+                )
+            raise StateAccessTimeoutError(str(exc)) from exc
         if _is_request_conflict(exc) and not _is_fatal_apply_error(exc):
             raise RequestConflictError(str(exc)) from exc
+        if _is_state_access_timeout(exc):
+            raise StateAccessTimeoutError(str(exc)) from exc
         raise
 
 
 def terraform_output(stack_dir: Path) -> dict[str, Any]:
-    output = run_logged(
-        ["terraform", f"-chdir={stack_dir}", "output", "-json"],
-        capture_output=True,
-        echo="never",
-    ).stdout
-    return json.loads(output)
+    @retry(
+        reraise=True,
+        retry=retry_if_exception_type(StateAccessTimeoutError),
+        stop=stop_after_attempt(5),
+        wait=wait_exponential(multiplier=1, min=2, max=30),
+        before_sleep=_log_output_retry,
+    )
+    def _inner() -> dict[str, Any]:
+        try:
+            output = run_logged(
+                ["terraform", f"-chdir={stack_dir}", "output", "-json"],
+                capture_output=True,
+                echo="never",
+            ).stdout
+        except subprocess.CalledProcessError as exc:
+            if _is_state_access_timeout(exc):
+                raise StateAccessTimeoutError(str(exc)) from exc
+            raise
+        return json.loads(output)
+
+    return _inner()
+
+
+def remote_state_outputs(
+    *, state_storage_account: str, state_container: str, state_key: str
+) -> dict[str, Any]:
+    """
+    Read Terraform outputs directly from a remote azurerm backend state blob.
+
+    This avoids `terraform init`/`terraform output` for stacks whose sole purpose
+    is to fetch outputs, which can hang on transient backend/network issues.
+    """
+    with tempfile.TemporaryDirectory(prefix="tfstate-") as temp_dir:
+        state_path = Path(temp_dir) / "state.tfstate"
+        run_logged(
+            [
+                "az",
+                "storage",
+                "blob",
+                "download",
+                "--auth-mode",
+                "login",
+                "--only-show-errors",
+                "--account-name",
+                state_storage_account,
+                "--container-name",
+                state_container,
+                "--name",
+                state_key,
+                "--file",
+                str(state_path),
+                "-o",
+                "none",
+            ],
+            capture_output=True,
+            echo="on_error",
+        )
+        parsed = json.loads(state_path.read_text())
+        outputs = parsed.get("outputs")
+        if not isinstance(outputs, dict):
+            raise KeyError(
+                f"Remote state {state_key} in {state_storage_account}/{state_container} "
+                "is missing top-level 'outputs'"
+            )
+        return outputs
+
+
+def local_state_outputs(state_path: Path) -> dict[str, Any]:
+    parsed = json.loads(state_path.read_text())
+    outputs = parsed.get("outputs")
+    if not isinstance(outputs, dict):
+        raise KeyError(f"Local state {state_path} is missing top-level 'outputs'")
+    return outputs
 
 
 def state_prefix_from_blob(blob_key: str) -> str:
@@ -519,9 +742,7 @@ def load_bootstrap_state(env: str, paths: Paths, ctx: AzureContext) -> Bootstrap
         raise FileNotFoundError(
             f"Bootstrap state not found at {state_path}. Run deploy-bootstrap for env '{env}' first."
         )
-    export_core_tf_env(env, ctx)
-    terraform_init_local(paths.bootstrap, state_path)
-    outputs = terraform_output(paths.bootstrap)
+    outputs = local_state_outputs(state_path)
     return bootstrap_state_from_outputs(outputs)
 
 
@@ -529,15 +750,11 @@ def load_observability_state(
     env: str, paths: Paths, ctx: AzureContext, bootstrap_state: BootstrapState
 ) -> ObservabilityState:
     export_core_tf_env(env, ctx)
-    terraform_init_remote(
-        paths.observability,
-        tenant_id=ctx.tenant_id,
-        state_rg=bootstrap_state.resource_group,
-        state_sa=bootstrap_state.storage_account,
+    outputs = remote_state_outputs(
+        state_storage_account=bootstrap_state.storage_account,
         state_container=bootstrap_state.container,
         state_key=state_key(bootstrap_state.state_prefix, "05-observability"),
     )
-    outputs = terraform_output(paths.observability)
     return observability_state_from_outputs(outputs)
 
 
@@ -545,13 +762,9 @@ def load_foundation_state(
     env: str, paths: Paths, ctx: AzureContext, bootstrap_state: BootstrapState
 ) -> FoundationState:
     export_core_tf_env(env, ctx)
-    terraform_init_remote(
-        paths.foundation,
-        tenant_id=ctx.tenant_id,
-        state_rg=bootstrap_state.resource_group,
-        state_sa=bootstrap_state.storage_account,
+    outputs = remote_state_outputs(
+        state_storage_account=bootstrap_state.storage_account,
         state_container=bootstrap_state.container,
         state_key=state_key(bootstrap_state.state_prefix, "10-platform"),
     )
-    outputs = terraform_output(paths.foundation)
     return foundation_state_from_outputs(outputs)
