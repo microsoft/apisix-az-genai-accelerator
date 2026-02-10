@@ -34,11 +34,59 @@ ai-proxy-multi:
       name: {{ (b.NAME | default("backend" ~ loop.index0)) | tojson }}
       priority: {{ (b.PRIORITY | default(5)) | int }}
       weight: {{ (b.WEIGHT | default(1)) | int }}
-{% if b.KEY is defined %}
+{# Upstream authentication:
+  - Default: api-key (when KEY present)
+  - Optional: Entra ID (managed identity) when AUTH_MODE=entra
+  Entra config is passed to the driver via internal headers that are stripped before upstream.
+#}
+      {% set _auth_mode = (b.AUTH_MODE | default('') | string | lower) %}
+      {% if not _auth_mode and b.KEY is defined %}
+      {% set _auth_mode = 'api-key' %}
+      {% endif %}
+      {% if _auth_mode == 'entra' or _auth_mode == 'aad' or _auth_mode == 'entra-id' or _auth_mode == 'entra_id' %}
+      {# Prefer explicit per-backend overrides; fall back to global env; then to AZURE_CLIENT_ID/identity env. #}
+      {% set _msi_client_id = b.MSI_CLIENT_ID | default('') %}
+      {% if not _msi_client_id %}
+      {% set _msi_client_id = azure_openai_msi_client_id | default('') %}
+      {% endif %}
+      {% if not _msi_client_id %}
+      {% set _msi_client_id = azure_client_id | default('') %}
+      {% endif %}
+
+      {% set _msi_endpoint = msi_endpoint | default('') %}
+      {% if not _msi_endpoint %}
+      {% set _msi_endpoint = identity_endpoint | default('') %}
+      {% endif %}
+
+      {% set _msi_secret = identity_header | default('') %}
+      {% if not _msi_secret %}
+      {% set _msi_secret = msi_secret | default('') %}
+      {% endif %}
+
+      {% set _token_resource = b.TOKEN_RESOURCE | default('') %}
+      {% if not _token_resource %}
+      {% set _token_resource = azure_openai_token_resource | default('https://cognitiveservices.azure.com/') %}
+      {% endif %}
+      auth:
+        header:
+          x-apisix-ai-auth-mode: "entra"
+          x-apisix-ai-token-resource: {{ _token_resource | tojson }}
+          {% if _msi_client_id %}
+          x-apisix-ai-msi-client-id: {{ _msi_client_id | tojson }}
+          {% endif %}
+          {% if _msi_endpoint %}
+          x-apisix-ai-msi-endpoint: {{ _msi_endpoint | tojson }}
+          {% endif %}
+          {% if _msi_secret %}
+          x-apisix-ai-msi-secret: {{ _msi_secret | tojson }}
+          {% endif %}
+      {% elif _auth_mode == 'api-key' or _auth_mode == 'apikey' %}
+      {% if b.KEY is defined %}
       auth:
         header:
           api-key: "{{ b.KEY }}"
-{% endif %}
+      {% endif %}
+      {% endif %}
       override:
         endpoint: "{{ b.ENDPOINT }}"
       timeout:

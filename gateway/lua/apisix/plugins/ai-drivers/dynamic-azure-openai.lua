@@ -14,12 +14,20 @@
 local base   = require("apisix.plugins.ai-drivers.openai-base")
 local core   = require("apisix.core")
 local http   = require("resty.http")
+local http_headers = require("resty.http_headers")
 local plugin = require("apisix.plugin")
 local sse    = require("apisix.plugins.ai-drivers.sse")
 local url    = require("socket.url")
+local managed_identity = require("ai_accel.managed_identity")
 
 local _M     = {}
 local mt     = { __index = _M }
+
+-- ===== Upstream auth (api-key OR Entra ID via Managed Identity) =====
+--
+-- ai-proxy-multi only supports static per-instance headers, so Entra ID token
+-- fetching/refreshing is delegated to ai_accel.managed_identity, driven by
+-- internal headers rendered by hydrenv and stripped before upstream.
 
 -- Register custom variables for backend error tracking in prometheus metrics
 -- This allows $backend_error_status and $backend_identifier to be used in prometheus extra_labels
@@ -145,20 +153,6 @@ local function handle_error(err)
         return ngx.HTTP_GATEWAY_TIMEOUT
     end
     return ngx.HTTP_INTERNAL_SERVER_ERROR
-end
-
--- Case-insensitive header lookup
-local function hget(h, name)
-    if not h then return nil end
-    local v = h[name]
-    if v ~= nil then return v end
-    local lname = string.lower(name)
-    for k, vv in pairs(h) do
-        if string.lower(k) == lname then
-            return vv
-        end
-    end
-    return nil
 end
 
 local function apply_responses_usage(ctx, usage)
@@ -531,9 +525,13 @@ function _M.request(self, ctx, conf, request_table, extra_opts)
     -- Headers: user (filtered) + configured (config wins). No defaults.
     local user_hdrs  = collect_user_headers(ctx)
     local configured = extra_opts.headers or {}
-    local headers    = {}
-    for k, v in pairs(user_hdrs) do headers[k] = v end
-    for k, v in pairs(configured) do headers[k] = v end
+    local headers    = http_headers.new()
+    for k, v in pairs(user_hdrs) do
+        headers[k] = v
+    end
+    for k, v in pairs(configured) do
+        headers[k] = v
+    end
 
     -- Apply model_options into the request body (plugin contract; pure merge)
     if has_body then
@@ -564,6 +562,12 @@ function _M.request(self, ctx, conf, request_table, extra_opts)
             return ngx.HTTP_INTERNAL_SERVER_ERROR
         end
         headers["Content-Type"] = headers["Content-Type"] or "application/json"
+    end
+
+    local auth_err = managed_identity.apply_upstream_auth(headers, conf)
+    if auth_err then
+        core.log.error("dynamic-azure-openai: failed to apply upstream auth: ", auth_err)
+        return ngx.HTTP_INTERNAL_SERVER_ERROR
     end
 
     -- Connect & send
@@ -630,7 +634,7 @@ function _M.request(self, ctx, conf, request_table, extra_opts)
     sanitize_and_apply_resp_headers(res.headers)
 
     -- 2) Content-Type and SSE detection
-    local content_type = hget(res.headers, "Content-Type")
+    local content_type = res.headers and (res.headers["Content-Type"] or res.headers["content-type"])
     local is_sse = content_type and string.find(string.lower(content_type), "text/event-stream", 1, true)
 
     if is_sse then

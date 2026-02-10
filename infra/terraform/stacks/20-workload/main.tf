@@ -47,6 +47,8 @@ locals {
     "AZURE_OPENAI_WEIGHT_${idx}" => tostring(backend.weight)
   }
 
+  provisioned_backend_resource_ids = local.openai_outputs != null && can(local.openai_outputs.azure_openai_resource_ids) ? local.openai_outputs.azure_openai_resource_ids : []
+
   provisioned_secret_names = local.openai_outputs != null && can(local.openai_outputs.azure_openai_key_vault_secret_names) ? local.openai_outputs.azure_openai_key_vault_secret_names : []
 
   derived_secret_keys = distinct(keys(var.secrets))
@@ -203,6 +205,23 @@ resource "azurerm_role_assignment" "gateway_logs_dce_metrics_publisher" {
   count                = var.gateway_log_ingest_dce_id != "" ? 1 : 0
   scope                = var.gateway_log_ingest_dce_id
   role_definition_name = "Monitoring Metrics Publisher"
+  principal_id         = module.gateway.gateway_identity_principal_id
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Azure AI Foundry / OpenAI (Entra ID data-plane access)
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# When backends require Entra ID auth, the gateway identity must be granted the
+# Cognitive Services OpenAI User role on each Foundry/OpenAI account.
+#
+resource "azurerm_role_assignment" "gateway_openai_user" {
+  for_each = {
+    for idx, rid in local.provisioned_backend_resource_ids : tostring(idx) => rid
+  }
+
+  scope                = each.value
+  role_definition_name = "Cognitive Services OpenAI User"
   principal_id         = module.gateway.gateway_identity_principal_id
 }
 
