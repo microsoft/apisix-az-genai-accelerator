@@ -62,6 +62,7 @@ app_settings = {
   ## Allowed (ENDPOINT_N): https URL
   ## Allowed (PRIORITY_N): integer >=0 (bigger = more preferred)
   ## Allowed (WEIGHT_N): integer >=1 (distribution within same PRIORITY)
+  ## If using Codex, prefer Azure OpenAI endpoints (*.openai.azure.com) over Foundry (*.cognitiveservices.azure.com) to reduce `The encrypted content ... cannot be verified` errors.
   ## Example (primary): AZURE_OPENAI_ENDPOINT_0=https://ptu.openai.azure.com
   ## Example (fallback): AZURE_OPENAI_ENDPOINT_1=https://payg.openai.azure.com
   ## Docs: https://apisix.apache.org/docs/apisix/terminology/upstream/ | https://docs.api7.ai/apisix/key-concepts/upstreams/
