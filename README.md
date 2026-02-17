@@ -167,13 +167,20 @@ You can keep existing integrations—this gateway is designed to be “boring”
 - **OpenAI-style (v1)**: `/openai/v1/*` (including the **Responses API**)
 - **Azure OpenAI-style (legacy)**: `/openai/deployments/*` with `?api-version=...`
 
-Both styles run through the same routing, retries/failover, priority handling, and observability.
+Chat/completions/embeddings follow standard 429/5xx failover. Responses also uses
+`previous_response_id`/`response.id` affinity (stored in an internal cache) so
+backend retries do not corrupt encrypted reasoning state.
 
 ---
 
 ## How retries/failover work
 
-The gateway uses APISIX `ai-proxy-multi` with a custom **dynamic Azure OpenAI driver**. When a backend responds with **429** or **5xx**, the driver does **not** proxy that response body back to the client; it returns the status to APISIX so another backend can be tried immediately. On success, the gateway streams status/headers/body from the winning backend (including SSE), and records backend identifiers + error status for observability.
+The gateway uses APISIX `ai-proxy-multi` with a custom **dynamic Azure OpenAI driver**.
+
+- For chat/completions/embeddings: backend **429**/**5xx** responses are returned to APISIX retry logic so another backend can be tried immediately.
+- For Responses: the gateway tracks `previous_response_id` and returned `response.id` to keep each conversation on a compatible backend. It can retry targeted `400 invalid_encrypted_content` errors across backends and then persist the winning backend affinity for subsequent turns.
+
+On success, the gateway streams status/headers/body from the winning backend (including SSE), and records backend identifiers + error status for observability.
 
 ```mermaid
 flowchart LR
@@ -334,6 +341,17 @@ Add:
 - `GATEWAY_CLIENT_KEY_N`
 
 (sequential indexes, no gaps)
+
+### Responses affinity cache settings
+
+Set in `app_settings`:
+
+- `RESPONSES_AFFINITY_TTL_SECONDS` (optional, default `86400`)
+- `RESPONSES_AFFINITY_REDIS_TIMEOUT_MS` (optional, default `1000`)
+
+Set in `secrets`:
+
+- `RESPONSES_AFFINITY_REDIS_PASSWORD` (required)
 
 ### Local docker builds (instead of ACR builds)
 

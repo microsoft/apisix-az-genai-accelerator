@@ -13,6 +13,11 @@ output "gateway_app_name" {
   value       = module.gateway.gateway_app_name
 }
 
+output "responses_affinity_cache_fqdn" {
+  description = "Internal FQDN of the responses affinity cache"
+  value       = azurerm_container_app.responses_affinity_cache.ingress[0].fqdn
+}
+
 output "acr_login_server" {
   description = "Login server of the Container Registry"
   value       = module.gateway.acr_login_server

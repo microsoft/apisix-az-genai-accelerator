@@ -51,9 +51,25 @@ locals {
 
   provisioned_secret_names = local.openai_outputs != null && can(local.openai_outputs.azure_openai_key_vault_secret_names) ? local.openai_outputs.azure_openai_key_vault_secret_names : []
 
-  derived_secret_keys = distinct(keys(var.secrets))
+  derived_secret_keys                 = distinct(keys(var.secrets))
+  responses_affinity_password_env_var = "RESPONSES_AFFINITY_REDIS_PASSWORD"
+  responses_affinity_password_secret  = contains(local.derived_secret_keys, local.responses_affinity_password_env_var) ? lower(replace(local.responses_affinity_password_env_var, "_", "-")) : error("secrets must include RESPONSES_AFFINITY_REDIS_PASSWORD to enable responses affinity cache authentication")
 
-  derived_app_settings = var.app_settings
+  responses_affinity_cache_name   = lower(join("-", compact([var.workload_name, "rsp-cache", var.environment_code, local.region_code, var.identifier == "" ? null : var.identifier])))
+  responses_affinity_cache_image  = "redis:8.6.0-alpine3.23"
+  responses_affinity_cache_port   = 6379
+  responses_affinity_cache_cpu    = 0.25
+  responses_affinity_cache_memory = "0.5Gi"
+
+  derived_app_settings           = var.app_settings
+  responses_affinity_ttl_seconds = lookup(local.derived_app_settings, "RESPONSES_AFFINITY_TTL_SECONDS", "86400")
+  responses_affinity_timeout_ms  = lookup(local.derived_app_settings, "RESPONSES_AFFINITY_REDIS_TIMEOUT_MS", "1000")
+  responses_affinity_cache_settings = {
+    RESPONSES_AFFINITY_REDIS_HOST       = azurerm_container_app.responses_affinity_cache.ingress[0].fqdn
+    RESPONSES_AFFINITY_REDIS_PORT       = tostring(local.responses_affinity_cache_port)
+    RESPONSES_AFFINITY_TTL_SECONDS      = tostring(local.responses_affinity_ttl_seconds)
+    RESPONSES_AFFINITY_REDIS_TIMEOUT_MS = tostring(local.responses_affinity_timeout_ms)
+  }
 
   log_mode_value = lower(var.gateway_log_mode)
   otel_sample_rate_map = {
@@ -99,6 +115,7 @@ locals {
     local.provisioned_backend_weights,
     local.otel_sample_rate_setting,
     local.derived_app_settings,
+    local.responses_affinity_cache_settings,
     local.log_mode_settings
   )
 
@@ -256,6 +273,66 @@ resource "azurerm_role_assignment" "gateway_logs_dcr_contributor" {
 data "azurerm_container_registry" "platform" {
   name                = var.platform_acr_name
   resource_group_name = var.platform_resource_group_name
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Responses affinity cache (internal Redis)
+# ─────────────────────────────────────────────────────────────────────────────
+
+resource "azurerm_container_app" "responses_affinity_cache" {
+  name                         = local.responses_affinity_cache_name
+  resource_group_name          = module.env.rg_name
+  container_app_environment_id = module.env.aca_env_id
+  revision_mode                = "Single"
+
+  identity {
+    type         = "UserAssigned"
+    identity_ids = [var.aca_managed_identity_id]
+  }
+
+  secret {
+    name                = local.responses_affinity_password_secret
+    key_vault_secret_id = "https://${var.key_vault_name}.vault.azure.net/secrets/${local.responses_affinity_password_secret}"
+    identity            = var.aca_managed_identity_id
+  }
+
+  ingress {
+    external_enabled = false
+    target_port      = local.responses_affinity_cache_port
+    transport        = "tcp"
+
+    traffic_weight {
+      percentage      = 100
+      latest_revision = true
+    }
+  }
+
+  template {
+    container {
+      name   = "responses-affinity-cache"
+      image  = local.responses_affinity_cache_image
+      cpu    = local.responses_affinity_cache_cpu
+      memory = local.responses_affinity_cache_memory
+
+      command = ["sh", "-c"]
+      args = [
+        format(
+          "exec redis-server --bind 0.0.0.0 --port %d --appendonly no --save '' --requirepass \"$REDIS_PASSWORD\"",
+          local.responses_affinity_cache_port
+        )
+      ]
+
+      env {
+        name        = "REDIS_PASSWORD"
+        secret_name = local.responses_affinity_password_secret
+      }
+    }
+
+    min_replicas = 1
+    max_replicas = 1
+  }
+
+  tags = merge(local.common_tags, { role = "responses-affinity-cache" })
 }
 
 # ─────────────────────────────────────────────────────────────────────────────

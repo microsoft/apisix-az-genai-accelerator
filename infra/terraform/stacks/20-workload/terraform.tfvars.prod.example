@@ -93,6 +93,26 @@ app_settings = {
   ## Allowed: roundrobin | chash
   ## Example: roundrobin
   # lb_alg=roundrobin
+  ## Optional when LB_ALG=chash:
+  ## - LB_HASH_ON: consumer | vars | vars_combinations | header | cookie
+  ## - LB_HASH_KEY: key/expression for header/cookie/vars* modes
+  ## Examples:
+  ## - LB_HASH_ON=consumer
+  ## - LB_HASH_ON=header
+  ## - LB_HASH_KEY=X-Client-Request-Id
+  # LB_HASH_ON=consumer
+  # LB_HASH_KEY=
+
+  # -----------------------------
+  ## Responses affinity cache
+  ## Responses routes use previous_response_id/response.id continuity and can
+  ## safely retry invalid_encrypted_content only when this cache is healthy.
+  ## Host/port are injected automatically from the internal cache app.
+  ## Optional tuning:
+  ## - RESPONSES_AFFINITY_TTL_SECONDS (default: 86400)
+  ## - RESPONSES_AFFINITY_REDIS_TIMEOUT_MS (default: 1000)
+  # RESPONSES_AFFINITY_TTL_SECONDS=86400
+  # RESPONSES_AFFINITY_REDIS_TIMEOUT_MS=1000
 
   # -----------------------------
   ## APISIX Active Health Checks
@@ -426,6 +446,12 @@ secrets = {
   GATEWAY_CLIENT_KEY_0 = "prod-key-0"
   # GATEWAY_CLIENT_KEY_1=prod-key-1
   # GATEWAY_CLIENT_KEY_2=prod-key-2
+
+  # -----------------------------
+  ## Responses affinity cache auth (required)
+  ## Used by gateway + internal Redis cache for response-id affinity.
+  ## Allowed: non-empty string
+  # RESPONSES_AFFINITY_REDIS_PASSWORD=
 
   # -----------------------------
   # APIM gateway logger (Azure Monitor via DCR)

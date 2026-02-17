@@ -1,7 +1,7 @@
 -- Dynamic Azure OpenAI driver with transparent transport.
 -- Success path: stream status/headers/body from the FINAL successful backend.
--- Error path (429/5xx): DO NOT proxy; return status only so ai-proxy-multi can retry
--- another instance within the same request (APISIX 3.14+).
+-- Error path (429/5xx + targeted responses 400): DO NOT proxy; return status
+-- only so ai-proxy-multi can retry another instance within the same request.
 --
 -- Zero-defaulting policy:
 -- - No default api-version, no default Content-Type, no default scheme/port.
@@ -20,6 +20,7 @@ local sse = require("apisix.plugins.ai-drivers.sse")
 local url = require("socket.url")
 local managed_identity = require("ai_accel.managed_identity")
 local accel_utils = require("ai_accel.utils")
+local responses_affinity_store = require("ai_accel.responses_affinity_store")
 
 local _M = {}
 local mt = { __index = _M }
@@ -109,6 +110,8 @@ end
 
 -- ===== Utilities =====
 
+local append_affinity_key = responses_affinity_store.append_key
+
 local function sse_retryable_status_from_chunk(chunk)
 	-- Some Azure OpenAI streaming errors are surfaced as SSE "error" events
 	-- while the HTTP status remains 200. Detect retryable error codes early so
@@ -127,12 +130,22 @@ local function sse_retryable_status_from_chunk(chunk)
 
 		local err_obj = data.error
 		if type(err_obj) == "table" then
-			local code = err_obj.code or err_obj.type
+			local code = string.lower(tostring(err_obj.code or err_obj.type or ""))
+			local message = string.lower(tostring(err_obj.message or err_obj.msg or ""))
 			if code == "too_many_requests" then
 				return ngx.HTTP_TOO_MANY_REQUESTS, core.json.encode({ error = err_obj })
 			end
 			if code == "server_error" or code == "internal_error" or code == "service_unavailable" then
 				return ngx.HTTP_BAD_GATEWAY, core.json.encode({ error = err_obj })
+			end
+			if
+				code == "invalid_encrypted_content"
+				or (
+					string.find(message, "encrypted content", 1, true)
+					and string.find(message, "could not be verified", 1, true)
+				)
+			then
+				return ngx.HTTP_BAD_REQUEST, core.json.encode({ error = err_obj })
 			end
 		end
 
@@ -257,11 +270,82 @@ local function extract_responses_text(output, accumulator)
 	return buffer
 end
 
-local function set_responses_text(ctx, pieces)
-	if type(pieces) ~= "table" or #pieces == 0 then
-		return
+local RESERVED_RESPONSES_OPERATION_IDS = {
+	compact = true,
+}
+
+local function extract_response_id_from_path(path)
+	if path == "" then
+		return nil
 	end
-	ctx.var.llm_response_text = table.concat(pieces, "")
+
+	local response_id = string.match(path, "/responses/([^/%?]+)")
+	if not response_id or response_id == "" then
+		return nil
+	end
+	if RESERVED_RESPONSES_OPERATION_IDS[response_id] then
+		return nil
+	end
+	return response_id
+end
+
+local function collect_responses_affinity_keys(request_table, path)
+	local keys = {}
+
+	append_affinity_key(keys, "response_id", request_table.previous_response_id)
+	append_affinity_key(keys, "response_id", extract_response_id_from_path(path))
+
+	local conversation = request_table.conversation
+	local conversation_id = type(conversation) == "table" and conversation.id or conversation
+	append_affinity_key(keys, "conversation", conversation_id)
+
+	return keys
+end
+
+local function persist_responses_affinity(ctx, response_id)
+	local request_keys = ctx.responses_affinity_request_keys
+	local write_keys = {}
+	for _, key_item in ipairs(request_keys or {}) do
+		core.table.insert(write_keys, key_item)
+	end
+	append_affinity_key(write_keys, "response_id", response_id)
+
+	if #write_keys == 0 then
+		return true, nil
+	end
+
+	local backend_identifier = ctx.backend_identifier
+	local ok, store_err = responses_affinity_store.set_backend(write_keys, backend_identifier)
+	if not ok then
+		core.log.error("responses affinity write failed: ", store_err)
+		return nil, store_err
+	end
+
+	return true, nil
+end
+
+local function is_invalid_encrypted_content_error(raw_body)
+	if type(raw_body) ~= "string" or raw_body == "" then
+		return false
+	end
+
+	local decoded = core.json.decode(raw_body)
+	if type(decoded) ~= "table" then
+		return false
+	end
+
+	local err_obj = decoded.error
+	if type(err_obj) ~= "table" then
+		return false
+	end
+
+	local code = string.lower(tostring(err_obj.code or ""))
+	if code == "invalid_encrypted_content" then
+		return true
+	end
+
+	local message = string.lower(tostring(err_obj.message or err_obj.msg or ""))
+	return string.find(message, "encrypted content", 1, true) and string.find(message, "could not be verified", 1, true)
 end
 
 local function handle_chat_stream(ctx, res, body_reader, conf, httpc, contents, pending_chunks)
@@ -388,10 +472,19 @@ local function handle_responses_stream(ctx, res, body_reader, conf, httpc, pendi
 			elseif last_response and type(last_response.output) == "table" then
 				buffer = extract_responses_text(last_response.output, {})
 			end
+
 			if last_usage then
 				apply_responses_usage(ctx, last_usage)
 			end
-			set_responses_text(ctx, buffer)
+			if #buffer > 0 then
+				ctx.var.llm_response_text = table.concat(buffer, "")
+			end
+			if type(last_response) == "table" then
+				local _, affinity_err = persist_responses_affinity(ctx, last_response.id)
+				if affinity_err then
+					core.log.error("failed to persist responses affinity at stream end: ", affinity_err)
+				end
+			end
 			if conf.keepalive then
 				local ok2, kerr = httpc:set_keepalive(conf.keepalive_timeout, conf.keepalive_pool)
 				if not ok2 then
@@ -421,12 +514,14 @@ local function handle_responses_stream(ctx, res, body_reader, conf, httpc, pendi
 				if type(delta) == "string" and delta ~= "" then
 					core.table.insert(buffer, delta)
 					core.table.insert(ctx.llm_response_contents_in_chunk, delta)
-					set_responses_text(ctx, buffer)
+					ctx.var.llm_response_text = table.concat(buffer, "")
 				end
 			elseif event_type == "response.output_item.added" then
 				if type(event_data.item) == "table" then
 					buffer = extract_responses_text({ event_data.item }, buffer)
-					set_responses_text(ctx, buffer)
+					if #buffer > 0 then
+						ctx.var.llm_response_text = table.concat(buffer, "")
+					end
 				end
 			elseif event_type == "response.completed" then
 				local response_obj = event_data.response
@@ -440,6 +535,7 @@ local function handle_responses_stream(ctx, res, body_reader, conf, httpc, pendi
 						last_usage = response_obj.usage
 						apply_responses_usage(ctx, response_obj.usage)
 					end
+
 					local combined = {}
 					if type(response_obj.output_text) == "string" and response_obj.output_text ~= "" then
 						core.table.insert(combined, response_obj.output_text)
@@ -449,9 +545,14 @@ local function handle_responses_stream(ctx, res, body_reader, conf, httpc, pendi
 					end
 					if #combined > 0 then
 						buffer = combined
-						set_responses_text(ctx, buffer)
+						ctx.var.llm_response_text = table.concat(buffer, "")
 					end
+
 					ctx.var.llm_request_done = true
+					local _, affinity_err = persist_responses_affinity(ctx, response_obj.id)
+					if affinity_err then
+						core.log.error("failed to persist responses affinity from completed event: ", affinity_err)
+					end
 				end
 			elseif event_type == "response.failed" or event_type == "response.error" then
 				core.log.error("responses stream reported error event: ", core.json.delay_encode(event_data))
@@ -504,7 +605,14 @@ local function handle_responses_json(ctx, headers, raw_res_body)
 	if type(res_body.output) == "table" then
 		pieces = extract_responses_text(res_body.output, pieces)
 	end
-	set_responses_text(ctx, pieces)
+	if #pieces > 0 then
+		ctx.var.llm_response_text = table.concat(pieces, "")
+	end
+
+	local _, affinity_err = persist_responses_affinity(ctx, res_body.id)
+	if affinity_err then
+		core.log.error("failed to persist responses affinity from json response: ", affinity_err)
+	end
 end
 
 local function handle_chat_json(ctx, headers, raw_res_body)
@@ -598,14 +706,13 @@ function _M.request(self, ctx, conf, request_table, extra_opts)
 
 	-- Transparent path & query
 	-- Nginx/APISIX vars may be set to "" when unset; treat empty as missing.
-	local path =
-		accel_utils.first_non_empty_string(
-			ctx.var.upstream_uri,
-			ctx.upstream_uri,
-			ngx.var.upstream_uri,
-			ctx.var.uri,
-			ngx.var.uri
-		)
+	local path = accel_utils.first_non_empty_string(
+		ctx.var.upstream_uri,
+		ctx.upstream_uri,
+		ngx.var.upstream_uri,
+		ctx.var.uri,
+		ngx.var.uri
+	)
 	local in_query = core.request.get_uri_args(ctx) or {}
 	local query_params = accel_utils.shallow_copy(in_query)
 	local request_kind = classify_request(path)
@@ -639,7 +746,7 @@ function _M.request(self, ctx, conf, request_table, extra_opts)
 	-- Azure OpenAI's OpenAI v1 Responses streaming does not currently accept
 	-- stream_options.include_usage, but some upstream callers/plugins may inject it.
 	-- Strip it to keep streaming functional.
-	if request_kind == "ai_responses" and type(request_table) == "table" then
+	if request_kind == "ai_responses" then
 		local so = request_table.stream_options
 		if type(so) == "table" then
 			so.include_usage = nil
@@ -648,6 +755,50 @@ function _M.request(self, ctx, conf, request_table, extra_opts)
 			end
 		else
 			request_table.stream_options = nil
+		end
+	end
+
+	if request_kind == "ai_responses" then
+		local _, availability_err = responses_affinity_store.ensure_available()
+		if availability_err then
+			core.log.error("responses affinity unavailable: ", availability_err)
+			return ngx.HTTP_SERVICE_UNAVAILABLE,
+				core.json.encode({
+					error = {
+						code = "responses_affinity_unavailable",
+						message = "Responses affinity store is unavailable",
+					},
+				})
+		end
+
+		local request_affinity_keys = collect_responses_affinity_keys(request_table, path)
+		ctx.responses_affinity_request_keys = request_affinity_keys
+
+		local expected_backend, lookup_err = responses_affinity_store.get_backend(request_affinity_keys)
+		if lookup_err then
+			core.log.error("responses affinity lookup failed: ", lookup_err)
+			return ngx.HTTP_SERVICE_UNAVAILABLE,
+				core.json.encode({
+					error = {
+						code = "responses_affinity_lookup_failed",
+						message = "Responses affinity lookup failed",
+					},
+				})
+		end
+
+		if
+			expected_backend
+			and expected_backend ~= ""
+			and string.lower(expected_backend) ~= string.lower(ctx.backend_identifier)
+		then
+			ctx.backend_error_status = tostring(ngx.HTTP_SERVICE_UNAVAILABLE)
+			return ngx.HTTP_SERVICE_UNAVAILABLE,
+				core.json.encode({
+					error = {
+						code = "responses_affinity_backend_mismatch",
+						message = "Retrying request on affinity-matched backend",
+					},
+				})
 		end
 	end
 
@@ -725,6 +876,8 @@ function _M.request(self, ctx, conf, request_table, extra_opts)
 		ctx.backend_error_status = tostring(status)
 	end
 
+	local prefetched_non_retryable_body
+
 	-- Retry contract aligned with base driver: return status only for 429/5xx
 	if status == 429 or (status >= 500 and status < 600) then
 		local body, berr = res:read_body() -- keep error text if all retries fail
@@ -738,6 +891,25 @@ function _M.request(self, ctx, conf, request_table, extra_opts)
 			end
 		end
 		return status, body
+	end
+
+	-- Responses can fail with invalid_encrypted_content when backend affinity is broken.
+	-- Surface this 400 through retry flow so ai-proxy-multi can try another backend.
+	if status == ngx.HTTP_BAD_REQUEST and request_kind == "ai_responses" then
+		local body, berr = res:read_body()
+		if not body and berr then
+			core.log.warn("failed to read 400 body from responses backend: ", berr)
+		end
+		if is_invalid_encrypted_content_error(body) then
+			if conf.keepalive then
+				local ok2, kerr = httpc:set_keepalive(conf.keepalive_timeout, conf.keepalive_pool)
+				if not ok2 then
+					core.log.warn("failed to keepalive connection (responses 400 retry): ", kerr)
+				end
+			end
+			return status, body
+		end
+		prefetched_non_retryable_body = body
 	end
 
 	-- Success or non-retryable 4xx: manual streaming with response filter parity.
@@ -819,7 +991,10 @@ function _M.request(self, ctx, conf, request_table, extra_opts)
 	if request_kind then
 		ctx.var.request_type = request_kind
 	end
-	local raw_res_body, rerr = res:read_body()
+	local raw_res_body, rerr = prefetched_non_retryable_body, nil
+	if raw_res_body == nil then
+		raw_res_body, rerr = res:read_body()
+	end
 	if not raw_res_body then
 		core.log.warn("failed to read response body: ", rerr)
 		if conf.keepalive then

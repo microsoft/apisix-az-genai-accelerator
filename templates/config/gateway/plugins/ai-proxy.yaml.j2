@@ -14,7 +14,9 @@
     Load Balancing:
       - LB_ALG: Algorithm (roundrobin | chash)
         - roundrobin: Distribute evenly across backends
-        - chash: Consistent hashing on X-Conversation-ID header
+        - chash: Consistent hashing (configure hash source via LB_HASH_ON/LB_HASH_KEY)
+      - LB_HASH_ON: chash source (consumer | vars | vars_combinations | header | cookie)
+      - LB_HASH_KEY: key expression when hash source requires one (header/cookie/vars*)
         Default: roundrobin
   
   Backends are loaded via Python code in gateway/core/loader.py
@@ -97,12 +99,13 @@ ai-proxy-multi:
   balancer:
     algorithm: {{ lb_alg | default('roundrobin') | tojson }}   # roundrobin | chash
 {% if (lb_alg | default('roundrobin')) == "chash" %}
-    hash_on: header
-    key: X-Conversation-ID
+    hash_on: {{ lb_hash_on | default('consumer') | tojson }}
+{% if (lb_hash_on | default('consumer')) in ["header", "cookie", "vars", "vars_combinations"] %}
+    key: {{ lb_hash_key | tojson }}
 {% endif %}
-  # Fallback on both rate limiting (429) and server errors (5xx)
-  # This allows the plugin to try alternate instances on any failure
-  fallback_strategy: ["http_429", "http_5xx"]
+{% endif %}
+  # Route-level overrides can narrow or expand fallback behavior per API surface.
+  fallback_strategy: {{ ai_proxy_fallback_strategy | default(["http_429", "http_5xx"]) | tojson }}
   logging:
     summaries: {{ ai_proxy_log_summaries | default(true) | tojson }}
 {% if apisix_active_health_checks | default(false) %}

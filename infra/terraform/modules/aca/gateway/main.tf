@@ -110,6 +110,14 @@ locals {
 
   # Final configuration uses non-secret app settings as provided
   app_setting_env_vars = local.kv_app_settings
+  responses_affinity_env_vars = {
+    for key, value in local.app_setting_env_vars : key => value
+    if startswith(upper(key), "RESPONSES_AFFINITY_")
+  }
+  responses_affinity_secret_names = [
+    for secret_name in local.all_kv_secrets : secret_name
+    if startswith(secret_name, "responses-affinity-")
+  ]
 
   container_identity_ids = toset(
     compact([
@@ -245,6 +253,22 @@ resource "azurerm_container_app" "gateway" {
       image  = var.gateway_image
       cpu    = var.gateway_cpu
       memory = var.gateway_memory
+
+      dynamic "env" {
+        for_each = local.responses_affinity_env_vars
+        content {
+          name  = env.key
+          value = env.value
+        }
+      }
+
+      dynamic "env" {
+        for_each = toset(local.responses_affinity_secret_names)
+        content {
+          name        = upper(replace(env.value, "-", "_"))
+          secret_name = env.value
+        }
+      }
 
       volume_mounts {
         name = "shared-configs"
