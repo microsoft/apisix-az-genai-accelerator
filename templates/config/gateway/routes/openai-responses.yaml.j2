@@ -47,10 +47,8 @@
 {% include "plugins/ip-restriction.yaml.j2" %}
 {% include "plugins/response-rewrite.yaml.j2" %}
 {% include "plugins/cache.yaml.j2" %}
-{% include "plugins/proxy-buffering.yaml.j2" %}
 {% include "plugins/proxy-control.yaml.j2" %}
 {% include "plugins/opentelemetry.yaml.j2" %}
-{% set ai_proxy_fallback_strategy = ["http_400", "http_429", "http_5xx"] %}
 {% include "plugins/ai-proxy.yaml.j2" %}
 {% endfilter %}
 
@@ -99,7 +97,6 @@
 {% include "plugins/response-rewrite.yaml.j2" %}
 {% include "plugins/cache.yaml.j2" %}
 {% include "plugins/opentelemetry.yaml.j2" %}
-{% set ai_proxy_fallback_strategy = ["http_400", "http_429", "http_5xx"] %}
 {% include "plugins/ai-proxy.yaml.j2" %}
 {% endfilter %}
 

@@ -65,7 +65,7 @@ locals {
   responses_affinity_ttl_seconds = lookup(local.derived_app_settings, "RESPONSES_AFFINITY_TTL_SECONDS", "86400")
   responses_affinity_timeout_ms  = lookup(local.derived_app_settings, "RESPONSES_AFFINITY_REDIS_TIMEOUT_MS", "1000")
   responses_affinity_cache_settings = {
-    RESPONSES_AFFINITY_REDIS_HOST       = azurerm_container_app.responses_affinity_cache.ingress[0].fqdn
+    RESPONSES_AFFINITY_REDIS_HOST       = local.responses_affinity_cache_name
     RESPONSES_AFFINITY_REDIS_PORT       = tostring(local.responses_affinity_cache_port)
     RESPONSES_AFFINITY_TTL_SECONDS      = tostring(local.responses_affinity_ttl_seconds)
     RESPONSES_AFFINITY_REDIS_TIMEOUT_MS = tostring(local.responses_affinity_timeout_ms)
@@ -298,6 +298,7 @@ resource "azurerm_container_app" "responses_affinity_cache" {
 
   ingress {
     external_enabled = false
+    exposed_port     = local.responses_affinity_cache_port
     target_port      = local.responses_affinity_cache_port
     transport        = "tcp"
 

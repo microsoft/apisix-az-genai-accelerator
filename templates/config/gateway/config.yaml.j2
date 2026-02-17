@@ -38,6 +38,14 @@ apisix:
     port: 7085
 
 nginx_config:
+  # Expose selected container env vars to APISIX worker Lua (os.getenv).
+  envs:
+    - RESPONSES_AFFINITY_REDIS_HOST
+    - RESPONSES_AFFINITY_REDIS_PORT
+    - RESPONSES_AFFINITY_REDIS_PASSWORD
+    - RESPONSES_AFFINITY_REDIS_TIMEOUT_MS
+    - RESPONSES_AFFINITY_TTL_SECONDS
+
   # Logging Configuration for Containerized Deployments
   # Follows 12-factor app principles: logs to stdout/stderr for container log capture
   # See: https://12factor.net/logs
@@ -56,6 +64,8 @@ nginx_config:
   # See: https://nginx.org/en/docs/http/ngx_http_log_module.html#access_log
   http_server_configuration_snippet: |
     access_log /dev/stdout;
+    # Keep SSE/token streaming unbuffered without relying on optional plugins.
+    proxy_buffering off;
 
 # Top-level plugins allow-list (replaces APISIX defaults)
 # CRITICAL: This must be at top level, NOT under apisix:
@@ -74,8 +84,6 @@ plugins:
   # Observability (always active)
   - request-id         # Request correlation via X-Request-ID header
                        # See: https://apisix.apache.org/docs/apisix/plugins/request-id/
-  - proxy-buffering    # Per-route streaming control for chat/responses endpoints
-                       # See: https://apisix.apache.org/docs/apisix/plugins/proxy-buffering/
   - proxy-control      # Per-route request buffering control (chat/responses)
                        # See: https://apisix.apache.org/docs/apisix/plugins/proxy-control/
   - prometheus         # Metrics export on port 9091
