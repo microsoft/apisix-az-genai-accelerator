@@ -55,7 +55,6 @@ locals {
   responses_affinity_password_env_var = "RESPONSES_AFFINITY_REDIS_PASSWORD"
   responses_affinity_password_secret  = contains(local.derived_secret_keys, local.responses_affinity_password_env_var) ? lower(replace(local.responses_affinity_password_env_var, "_", "-")) : error("secrets must include RESPONSES_AFFINITY_REDIS_PASSWORD to enable responses affinity cache authentication")
 
-  responses_affinity_cache_name   = lower(join("-", compact([var.workload_name, "rsp-cache", var.environment_code, local.region_code, var.identifier == "" ? null : var.identifier])))
   responses_affinity_cache_image  = "redis:8.6.0-alpine3.23"
   responses_affinity_cache_port   = 6379
   responses_affinity_cache_cpu    = 0.25
@@ -64,13 +63,6 @@ locals {
   derived_app_settings           = var.app_settings
   responses_affinity_ttl_seconds = lookup(local.derived_app_settings, "RESPONSES_AFFINITY_TTL_SECONDS", "86400")
   responses_affinity_timeout_ms  = lookup(local.derived_app_settings, "RESPONSES_AFFINITY_REDIS_TIMEOUT_MS", "1000")
-  responses_affinity_cache_settings = {
-    RESPONSES_AFFINITY_REDIS_HOST       = local.responses_affinity_cache_name
-    RESPONSES_AFFINITY_REDIS_PORT       = tostring(local.responses_affinity_cache_port)
-    RESPONSES_AFFINITY_TTL_SECONDS      = tostring(local.responses_affinity_ttl_seconds)
-    RESPONSES_AFFINITY_REDIS_TIMEOUT_MS = tostring(local.responses_affinity_timeout_ms)
-  }
-
   log_mode_value = lower(var.gateway_log_mode)
   otel_sample_rate_map = {
     prod = "0.1"
@@ -108,6 +100,34 @@ locals {
     AZURE_OPENAI_WEIGHT_2   = "1"
   } : {}
 
+  final_secret_names = distinct(concat(
+    local.provisioned_secret_names,
+    local.derived_secret_names
+  ))
+
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Naming (responses affinity cache)
+# ─────────────────────────────────────────────────────────────────────────────
+
+module "responses_affinity_cache_naming" {
+  source  = "Azure/naming/azurerm"
+  version = "0.4.2"
+  # Role last: workload-env-region-role
+  suffix        = compact([local.workload_code, local.env_code, local.region_code, "rsp-cache", local.identifier_code == "" ? null : local.identifier_code])
+  unique-length = 6
+}
+
+locals {
+  responses_affinity_cache_name = module.responses_affinity_cache_naming.container_app.name_unique
+  responses_affinity_cache_settings = {
+    RESPONSES_AFFINITY_REDIS_HOST       = local.responses_affinity_cache_name
+    RESPONSES_AFFINITY_REDIS_PORT       = tostring(local.responses_affinity_cache_port)
+    RESPONSES_AFFINITY_TTL_SECONDS      = tostring(local.responses_affinity_ttl_seconds)
+    RESPONSES_AFFINITY_REDIS_TIMEOUT_MS = tostring(local.responses_affinity_timeout_ms)
+  }
+
   final_app_settings = merge(
     local.simulator_env,
     local.provisioned_backend_env_vars,
@@ -118,12 +138,6 @@ locals {
     local.responses_affinity_cache_settings,
     local.log_mode_settings
   )
-
-  final_secret_names = distinct(concat(
-    local.provisioned_secret_names,
-    local.derived_secret_names
-  ))
-
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
